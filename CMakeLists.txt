@@ -21,12 +21,6 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /MP /W3 /Zi /O2 /Ob1 /DNDEBUG")
 endif()
 
-string(TIMESTAMP TODAY "%Y-%m-%d %H:%M %z")
-message(${TODAY})
-
-string(TIMESTAMP TODAY "%Y-%m-%d %H:%M %z" UTC)
-message(${TODAY})
-
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
 include(EnsureVersionInformation)

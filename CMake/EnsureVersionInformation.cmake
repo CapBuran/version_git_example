@@ -11,7 +11,7 @@ endfunction()
 
 function(AcquireGitInformation path GitInfo)
   execute_process(
-    COMMAND git log -1 --format="AAA%aiBBB%hCCC%an\(%ae\)DDD%sEEE"
+    COMMAND git log -1 --format="AAA%aiBBB%HCCC%an\(%ae\)DDD%sEEE"
     ENCODING UTF8
     OUTPUT_VARIABLE outvar
     WORKING_DIRECTORY ${path}
@@ -204,13 +204,13 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
 
   set(GEN_CONTEXT 
 [==[
-    git commit hash: AbbreviatedHash
-    git commit timestamp: CommitterDate
-    git commit author: AuthorName
-    git subject: Subject
-    project path: [RefName]ProjectId
-    build pipeline: PipelineBranchId.PipelineId
     product version: PipelinVersioneBranchId
+    build pipeline: PipelineBranchId.PipelineId
+    git commit hash: AbbreviatedHash
+    git subject: Subject
+    git commit author: AuthorName
+    git commit timestamp: CommitterDate
+    project path: [RefName]ProjectId
     build date: ]==]
   )
 
@@ -234,9 +234,6 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
   string(REPLACE "PipelineId" ${PipelineId} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "PipelinVersioneBranchId" ${Version} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "BuildDate" ${BuildDate} GEN_CONTEXT ${GEN_CONTEXT})
-#  string(REPLACE "__Date__" ${Date} XML_CONTEXT ${XML_CONTEXT})
-#  string(REPLACE "__Time__" ${Time} XML_CONTEXT ${XML_CONTEXT})
-#  string(REPLACE "__TimeZone__" ${TimeZone} XML_CONTEXT ${XML_CONTEXT})
 
   FileWriteIsChanged(${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml ${XML_CONTEXT})
   FileWriteIsChanged(${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt ${GEN_CONTEXT})
