@@ -82,12 +82,12 @@ function(create_source_version_files target_name output_dir file_xml file_gen)
   file(READ ${output_dir}/${file_gen} file_input_gen HEX)
   string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," file_input_gen ${file_input_gen})
 
+  string(TIMESTAMP Date "%Y-%m-%d")
+  string(TIMESTAMP Time "%H:%M:%S")
+  string(TIMESTAMP TimeZone "%z")
+
   set(filedata_to_write_static_h
   [==[
-unsigned int @target_name@_VersionGenSizeStatic()\;
-
-unsigned int @target_name@_VersionXMLSizeStatic()\;
-
 const char* @target_name@_VersionGenStatic()\;
 
 const char* @target_name@_VersionXMLStatic()\;
@@ -100,24 +100,16 @@ const unsigned char @target_name@_XML[] = { @file_input_xml@ }\;
 
 const unsigned char @target_name@_Gen[] = { @file_input_gen@ }\;
 
-const char @target_name@_date[] =  __DATE__ " " __TIME__\;
+const char @target_name@_date[] =  "@Date@" " "  __TIME__ " " "@TimeZone@"\;
 
 static char @target_name@_result_gen[sizeof(@target_name@_Gen) + sizeof(@target_name@_date) + 1]\;
 
-unsigned int @target_name@_VersionXMLSizeStatic() {
-  return sizeof(@target_name@_XML)\;
-}
-
-unsigned int @target_name@_VersionGenSizeStatic() {
-  return sizeof(@target_name@_Gen) + sizeof(@target_name@_date)\;
-}
-
 const char* @target_name@_VersionXMLStatic() {
- return reinterpret_cast<const char*>(&@target_name@_XML[0])\;
+  return reinterpret_cast<const char*>(&@target_name@_XML[0])\;
 }
 
 const char* @target_name@_VersionGenStatic() {
- for (int i = 0\; i < sizeof(@target_name@_Gen)\; i++)
+  for (int i = 0\; i < sizeof(@target_name@_Gen)\; i++)
     @target_name@_result_gen[i] = @target_name@_Gen[i]\;
   for (int i = 0\; i < sizeof(@target_name@_date)\; i++)
     @target_name@_result_gen[sizeof(@target_name@_Gen) + i] = @target_name@_date[i]\;
@@ -147,7 +139,7 @@ const char* @target_name@_VersionGenStatic() {
 
 endfunction()
 
-function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR IS_PUBLIC)
+function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
   ReadVersionFromFile("${CMAKE_SOURCE_DIR}/VERSION" Version)
   AcquireGitlabPipelineBranchId(PipelineBranchId)
   AcquireProjectId(ProjectId)
@@ -185,9 +177,14 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR IS_PUBLIC)
   string(REPLACE "\n" "" AuthorName ${AuthorName})
   string(REPLACE "\n" "" Subject ${Subject})
   string(REPLACE "\n" "" Version ${Version})
+  string(TIMESTAMP Date "%Y-%m-%d")
+  string(TIMESTAMP Time "%H:%M:%S")
+  string(TIMESTAMP TimeZone "%z")
+
+  set(BuildDate "${Date} ${Time} ${TimeZone}")
 
   set(XML_CONTEXT 
-  [==[
+[==[
     <VersionInfo>
       <FileVersion>
         PipelinVersioneBranchId-PipelineBranchId.PipelineId
@@ -236,6 +233,10 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR IS_PUBLIC)
   string(REPLACE "PipelineBranchId" ${PipelineBranchId} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "PipelineId" ${PipelineId} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "PipelinVersioneBranchId" ${Version} GEN_CONTEXT ${GEN_CONTEXT})
+  string(REPLACE "BuildDate" ${BuildDate} GEN_CONTEXT ${GEN_CONTEXT})
+#  string(REPLACE "__Date__" ${Date} XML_CONTEXT ${XML_CONTEXT})
+#  string(REPLACE "__Time__" ${Time} XML_CONTEXT ${XML_CONTEXT})
+#  string(REPLACE "__TimeZone__" ${TimeZone} XML_CONTEXT ${XML_CONTEXT})
 
   FileWriteIsChanged(${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml ${XML_CONTEXT})
   FileWriteIsChanged(${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt ${GEN_CONTEXT})

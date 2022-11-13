@@ -21,6 +21,12 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /MP /W3 /Zi /O2 /Ob1 /DNDEBUG")
 endif()
 
+string(TIMESTAMP TODAY "%Y-%m-%d %H:%M %z")
+message(${TODAY})
+
+string(TIMESTAMP TODAY "%Y-%m-%d %H:%M %z" UTC)
+message(${TODAY})
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
 include(EnsureVersionInformation)
@@ -30,4 +36,4 @@ file(GLOB ${PROJECT_NAME}_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_INC} ${${PROJECT_NAME}_SRC})
 
-EnsureVersionInformation(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} FALSE)
+EnsureVersionInformation(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR})
