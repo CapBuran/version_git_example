@@ -2,22 +2,24 @@ cmake_minimum_required(VERSION 3.19.8)
 
 function(ReadVersionFromFile file version)
   if(EXISTS ${file})
-     file(STRINGS ${file} outvar LIMIT_COUNT 1)
-    set(${version} ${outvar} PARENT_SCOPE)
+    file(STRINGS ${file} OutVar LIMIT_COUNT 1)
+    string(REPLACE "\n" "" OutVar ${OutVar})
+    set(${version} ${OutVar} PARENT_SCOPE)
   else()
     set(${version} "1.0" PARENT_SCOPE)
   endif()
 endfunction()
 
-function(AcquireGitInformation path GitInfo)
+function(AcquireGitInformationFormat Path Format GitInfo)
   execute_process(
-    COMMAND git log -1 --format="AAA%aiBBB%HCCC%an\(%ae\)DDD%sEEE"
+    COMMAND git log -1 --format=${Format}
     ENCODING UTF8
-    OUTPUT_VARIABLE outvar
-    WORKING_DIRECTORY ${path}
+    OUTPUT_VARIABLE OutVar
+    WORKING_DIRECTORY ${Path}
     TIMEOUT 5
   )
-  set(${GitInfo} ${outvar} PARENT_SCOPE)
+  string(REPLACE "\n" "" OutVar ${OutVar})
+  set(${GitInfo} ${OutVar} PARENT_SCOPE)
 endfunction()
 
 function(AcquireGitlabPipelineId id)
@@ -54,7 +56,6 @@ endfunction()
 
 function(FileWriteIsChanged path context)
   set(IsChanged 0)
-
   if(NOT EXISTS ${path})
     set(IsChanged 1)
   else()
@@ -140,27 +141,15 @@ const char* @target_name@_VersionGenStatic() {
 endfunction()
 
 function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
-  ReadVersionFromFile("${CMAKE_SOURCE_DIR}/VERSION" Version)
+  ReadVersionFromFile("${REPOSITORY_DIR}/VERSION" Version)
   AcquireGitlabPipelineBranchId(PipelineBranchId)
   AcquireProjectId(ProjectId)
   AcquireRefName(RefName)
   AcquireGitlabPipelineId(PipelineId)
-  AcquireGitInformation("${REPOSITORY_DIR}" GitInfo)
-
-  string(REGEX REPLACE "AAA(.+)BBB.+CCC.+DDD.+EEE" "\\1" CommitterDate ${GitInfo})
-  string(REGEX REPLACE "AAA.+BBB(.+)CCC.+DDD.+EEE" "\\1" AbbreviatedHash ${GitInfo})
-  string(REGEX REPLACE "AAA.+BBB.+CCC(.+)DDD.+EEE" "\\1" AuthorName ${GitInfo})
-  string(REGEX REPLACE "AAA.+BBB.+CCC.+DDD(.+)EEE" "\\1" Subject ${GitInfo})
-
-  string(REPLACE "\n" "" PipelineBranchId ${PipelineBranchId})
-  string(REPLACE "\n" "" ProjectId ${ProjectId})
-  string(REPLACE "\n" "" RefName ${RefName})
-  string(REPLACE "\n" "" PipelineId ${PipelineId})
-  string(REPLACE "\n" "" CommitterDate ${CommitterDate})
-  string(REPLACE "\n" "" AbbreviatedHash ${AbbreviatedHash})
-  string(REPLACE "\n" "" AuthorName ${AuthorName})
-  string(REPLACE "\n" "" Subject ${Subject})
-  string(REPLACE "\n" "" Version ${Version})
+  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%ai" CommitterDate)
+  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%H"  AbbreviatedHash)
+  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%ae" AuthorName)
+  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%s"  Subject)
 
   if(ENABLE_TEST_BUILD)
     set(Version "${Version} - this is test build")
@@ -168,15 +157,6 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
 
   set(VERSION_GEN_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
-  string(REPLACE "\n" "" PipelineBranchId ${PipelineBranchId})
-  string(REPLACE "\n" "" ProjectId ${ProjectId})
-  string(REPLACE "\n" "" RefName ${RefName})
-  string(REPLACE "\n" "" PipelineId ${PipelineId})
-  string(REPLACE "\n" "" CommitterDate ${CommitterDate})
-  string(REPLACE "\n" "" AbbreviatedHash ${AbbreviatedHash})
-  string(REPLACE "\n" "" AuthorName ${AuthorName})
-  string(REPLACE "\n" "" Subject ${Subject})
-  string(REPLACE "\n" "" Version ${Version})
   string(TIMESTAMP Date "%Y-%m-%d")
   string(TIMESTAMP Time "%H:%M:%S")
   string(TIMESTAMP TimeZone "%z")
