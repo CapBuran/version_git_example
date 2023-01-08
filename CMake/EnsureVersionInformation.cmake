@@ -6,13 +6,13 @@ function(ReadVersionFromFile file version)
     string(REPLACE "\n" "" OutVar ${OutVar})
     set(${version} ${OutVar} PARENT_SCOPE)
   else()
-    set(${version} "1.0" PARENT_SCOPE)
+    set(${version} "0.0" PARENT_SCOPE)
   endif()
 endfunction()
 
 function(AcquireGitInformationFormat Path Format GitInfo)
   execute_process(
-    COMMAND git log -1 --format=${Format}
+    COMMAND ${GIT_EXECUTABLE} log -1 --format=${Format}
     ENCODING UTF8
     OUTPUT_VARIABLE OutVar
     WORKING_DIRECTORY ${Path}
@@ -54,93 +54,13 @@ function(AcquireRefName id)
   endif()
 endfunction()
 
-function(FileWriteIsChanged path context)
-  set(IsChanged 0)
-  if(NOT EXISTS ${path})
-    set(IsChanged 1)
-  else()
-    file(READ ${path} TMP)
-    if(NOT TMP)
-      set(IsChanged 1)
-    else()
-      if(NOT ${TMP} STREQUAL ${context})
-        set(IsChanged 1)
-      endif()
-    endif()
-  endif()
-
-  if(IsChanged)
-    file(REMOVE ${path})
-    file(WRITE ${path} ${context})
-  endif()
-endfunction()
-
-function(create_source_version_files target_name output_dir file_xml file_gen)
-
-  file(READ ${output_dir}/${file_xml} file_input_xml HEX)
-  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," file_input_xml ${file_input_xml})
-
-  file(READ ${output_dir}/${file_gen} file_input_gen HEX)
-  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," file_input_gen ${file_input_gen})
-
-  string(TIMESTAMP Date "%Y-%m-%d")
-  string(TIMESTAMP Time "%H:%M:%S")
-  string(TIMESTAMP TimeZone "%z")
-
-  set(filedata_to_write_static_h
-  [==[
-const char* @target_name@_VersionGenStatic()\;
-
-const char* @target_name@_VersionXMLStatic()\;
-]==]
-  )
-
-  set(filedata_to_write_static_cpp
-  [==[
-const unsigned char @target_name@_XML[] = { @file_input_xml@ }\;
-
-const unsigned char @target_name@_Gen[] = { @file_input_gen@ }\;
-
-const char @target_name@_date[] =  "@Date@" " "  __TIME__ " " "@TimeZone@"\;
-
-static char @target_name@_result_gen[sizeof(@target_name@_Gen) + sizeof(@target_name@_date) + 1]\;
-
-const char* @target_name@_VersionXMLStatic() {
-  return reinterpret_cast<const char*>(&@target_name@_XML[0])\;
-}
-
-const char* @target_name@_VersionGenStatic() {
-  for (int i = 0\; i < sizeof(@target_name@_Gen)\; i++)
-    @target_name@_result_gen[i] = @target_name@_Gen[i]\;
-  for (int i = 0\; i < sizeof(@target_name@_date)\; i++)
-    @target_name@_result_gen[sizeof(@target_name@_Gen) + i] = @target_name@_date[i]\;
-  return reinterpret_cast<const char*>(&@target_name@_result_gen[0])\;
-}
-]==]
-  )
-
-  file(CONFIGURE
-    OUTPUT ${output_dir}/${target_name}_gen_version.h
-    CONTENT ${filedata_to_write_static_h}
-  )
-
-  file(CONFIGURE
-    OUTPUT ${output_dir}/${target_name}_gen_version.cpp
-    CONTENT ${filedata_to_write_static_cpp}
-  )
-
-  set (version_sources
-    ${output_dir}/${target_name}_gen_version.h
-    ${output_dir}/${target_name}_gen_version.cpp
-  )
-
-  target_include_directories(${target_name} PRIVATE ${output_dir})
-  target_sources(${target_name} PRIVATE ${version_sources})
-  source_group("Version Generated" FILES ${version_sources})
-
-endfunction()
-
 function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
+  if(NOT GIT_FOUND)
+    find_package(Git)
+  else()
+    set(GIT_EXECUTABLE git CACHE)
+  endif()
+
   ReadVersionFromFile("${REPOSITORY_DIR}/VERSION" Version)
   AcquireGitlabPipelineBranchId(PipelineBranchId)
   AcquireProjectId(ProjectId)
@@ -160,6 +80,10 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
   string(TIMESTAMP Date "%Y-%m-%d")
   string(TIMESTAMP Time "%H:%M:%S")
   string(TIMESTAMP TimeZone "%z")
+
+  if("${TimeZone}" STREQUAL "%z")
+    set(TimeZone "+0300")
+  endif()
 
   set(BuildDate "${Date} ${Time} ${TimeZone}")
 
@@ -191,7 +115,7 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
     git commit author: AuthorName
     git commit timestamp: CommitterDate
     project path: [RefName]ProjectId
-    build date: ]==]
+    build date: BuildDate]==]
   )
 
   string(REPLACE "Subject" ${Subject} XML_CONTEXT ${XML_CONTEXT})
@@ -215,9 +139,11 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
   string(REPLACE "PipelinVersioneBranchId" ${Version} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "BuildDate" ${BuildDate} GEN_CONTEXT ${GEN_CONTEXT})
 
-  FileWriteIsChanged(${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml ${XML_CONTEXT})
-  FileWriteIsChanged(${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt ${GEN_CONTEXT})
+  file(WRITE ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml ${XML_CONTEXT})
+  file(WRITE ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt ${GEN_CONTEXT})
 
-  create_source_version_files(${TARGET_NAME} ${VERSION_GEN_OUT_DIR} ${TARGET_NAME}_version_gen.xml ${TARGET_NAME}_gitlab_gen.txt)
+  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml)
+  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt)
 
+  ResourceSourceCodeGeneration(${TARGET_NAME} ${VERSION_GEN_OUT_DIR} ${FilesSRC})
 endfunction()
