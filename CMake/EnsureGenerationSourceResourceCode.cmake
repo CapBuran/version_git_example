@@ -28,7 +28,7 @@ function(ResourceSourceCodeGeneration Target OutDir)
   list(REMOVE_DUPLICATES ARGN)
 
   set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
-  set(FileNameResourceNameC "${OutDir}/${Target}_resource.c")
+  set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
   set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
 
@@ -58,8 +58,6 @@ const char* @FunctionName@()
 }
 
 ]==] ContextC)
-
-    string(REPLACE ", }" "}\;" ContextC ${ContextC})
 
     file(APPEND ${FileNameResourceNameHTMP} ${ContextH})
     file(APPEND ${FileNameResourceNameCTMP} ${ContextC})

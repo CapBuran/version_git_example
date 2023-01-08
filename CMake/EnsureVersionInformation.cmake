@@ -139,11 +139,11 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
   string(REPLACE "PipelinVersioneBranchId" ${Version} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "BuildDate" ${BuildDate} GEN_CONTEXT ${GEN_CONTEXT})
 
-  file(WRITE ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml ${XML_CONTEXT})
-  file(WRITE ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt ${GEN_CONTEXT})
+  file(WRITE ${VERSION_GEN_OUT_DIR}/version_gen.xml ${XML_CONTEXT})
+  file(WRITE ${VERSION_GEN_OUT_DIR}/gitlab_gen.txt ${GEN_CONTEXT})
 
-  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_version_gen.xml)
-  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/${TARGET_NAME}_gitlab_gen.txt)
+  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/version_gen.xml)
+  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/gitlab_gen.txt)
 
   ResourceSourceCodeGeneration(${TARGET_NAME} ${VERSION_GEN_OUT_DIR} ${FilesSRC})
 endfunction()
