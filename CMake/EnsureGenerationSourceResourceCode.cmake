@@ -75,7 +75,7 @@ endfunction()
 function(ResourceSourceCodeGenerationAddCustomCommand Target RepositoryDir OutDir)
   set(RecourceFileList "${OutDir}/${Target}_resource.txt")
   add_custom_command(TARGET ${Target} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RepositoryDir=${RepositoryDir}" -D"RecourceFileList=${RecourceFileList}" -P "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EnsureVersionCustomCommand.cmake"
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RepositoryDir=${RepositoryDir}" -D"RecourceFileList=${RecourceFileList}" -P "${RepositoryDir}/CMake/EnsureVersionCustomCommand.cmake"
     COMMENT "Generate resource file by ${FileNameResourceNameList}"
   )
 endfunction()
