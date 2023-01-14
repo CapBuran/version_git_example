@@ -147,7 +147,7 @@ endfunction()
 function(EnsureVersionInformation TargetName RepositoryDir)
   set(OutDir ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
-  EnsureVersionInformationCustomCommand(${OutDir} ${RepositoryDir})
+  EnsureVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
 
   list(APPEND FilesSRC ${OutDir}/version_gen.xml)
   list(APPEND FilesSRC ${OutDir}/gitlab_gen.txt)

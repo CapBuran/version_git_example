@@ -16,7 +16,4 @@ cmake_policy(POP)
 
 EnsureVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
 
-message("Resurses: ${Resurses}")
-
 ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${Resurses})
-

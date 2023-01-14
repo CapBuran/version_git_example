@@ -24,9 +24,6 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
 endfunction()
 
 function(ResourceSourceCodeGenerationCustomCommand Target OutDir)
-  message("ResourceSourceCodeGenerationCustomCommand: OutDir: ${OutDir}")
-
-  message("ARGN1: ${ARGN}")
   list(REMOVE_DUPLICATES ARGN)
 
   set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
@@ -41,7 +38,7 @@ function(ResourceSourceCodeGenerationCustomCommand Target OutDir)
   set(ContextAllC "")
 
   foreach(FileFullPath ${ARGN})
-    message("FileResource: ${FileFullPath}")
+    message(" FileResource: ${FileFullPath}")
 
     get_filename_component(FileName ${FileFullPath} NAME)
     string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
@@ -76,8 +73,6 @@ const char* @FunctionName@()
 endfunction()
 
 function(ResourceSourceCodeGenerationAddCustomCommand Target RepositoryDir OutDir)
-  message("ResourceSourceCodeGenerationAddCustomCommand: RepositoryDir111: ${RepositoryDir}")
-
   set(RecourceFileList "${OutDir}/${Target}_resource.txt")
   add_custom_command(TARGET ${Target} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RepositoryDir=${RepositoryDir}" -D"RecourceFileList=${RecourceFileList}" -P "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EnsureVersionCustomCommand.cmake"
@@ -87,8 +82,6 @@ endfunction()
 
 function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
   list(REMOVE_DUPLICATES ARGN)
-
-  message("ResourceSourceCodeGeneration: RepositoryDir111: ${RepositoryDir}")
 
   ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
 
@@ -100,8 +93,6 @@ function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
     file(APPEND ${FileNameResourceNameList} "${FileFullPath}\n")
   endforeach()
   
-  message("ResourceSourceCodeGeneration VersionSources: ${VersionSources}")
-
   set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
   set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
 
