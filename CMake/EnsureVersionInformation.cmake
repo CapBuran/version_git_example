@@ -54,7 +54,7 @@ function(AcquireRefName id)
   endif()
 endfunction()
 
-function(EnsureVersionInformationCustomCommand OutDir RepositoryDir)
+function(EnsureVersionInformationCustomCommand RepositoryDir OutDir)
   message("EnsureVersionInformationCustomCommand_OutDir: ${OutDir}")
 
   if(NOT GIT_FOUND)

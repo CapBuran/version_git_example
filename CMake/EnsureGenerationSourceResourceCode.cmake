@@ -23,7 +23,9 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 endfunction()
 
-function(ResourceSourceCodeGenerationCustomCommand Target OutDir VersionSources)
+function(ResourceSourceCodeGenerationCustomCommand Target OutDir)
+  message("ResourceSourceCodeGenerationCustomCommand: OutDir: ${OutDir}")
+
   message("ARGN1: ${ARGN}")
   list(REMOVE_DUPLICATES ARGN)
 
@@ -71,8 +73,6 @@ const char* @FunctionName@()
   file(REMOVE ${FileNameResourceNameHTMP})
   file(REMOVE ${FileNameResourceNameCTMP})
   
-  set(VersionSources1 ${FileNameResourceNameH} ${FileNameResourceNameC})
-  set(VersionSources ${VersionSources1} PARENT_SCOPE)
 endfunction()
 
 function(ResourceSourceCodeGenerationAddCustomCommand Target RepositoryDir OutDir)
@@ -90,8 +90,7 @@ function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
 
   message("ResourceSourceCodeGeneration: RepositoryDir111: ${RepositoryDir}")
 
-  set(VersionSources "")
-  ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${ARGN} ${VersionSources})
+  ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
 
   set(FileNameResourceNameList "${OutDir}/${Target}_resource.txt")
 
@@ -103,9 +102,12 @@ function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
   
   message("ResourceSourceCodeGeneration VersionSources: ${VersionSources}")
 
+  set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
+  set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
+
   target_include_directories(${Target} PRIVATE ${OutDir})
-  target_sources(${Target} PRIVATE ${VersionSources})
-  source_group("Generated" FILES ${VersionSources})
+  target_sources(${Target} PRIVATE ${FileNameResourceNameH} ${FileNameResourceNameC})
+  source_group("Generated" FILES ${FileNameResourceNameH} ${FileNameResourceNameC})
 
   ResourceSourceCodeGenerationAddCustomCommand(${Target} ${RepositoryDir} ${OutDir})
 endfunction()
