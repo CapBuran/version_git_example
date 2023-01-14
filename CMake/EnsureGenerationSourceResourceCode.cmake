@@ -23,19 +23,17 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 endfunction()
 
-function(ResourceSourceCodeGeneration Target OutDir)
-
+function(ResourceSourceCodeGenerationCustomCommand Target OutDir VersionSources)
+  message("ARGN1: ${ARGN}")
   list(REMOVE_DUPLICATES ARGN)
 
   set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
   set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
   set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
-  set(FileNameResourceNameList "${OutDir}/${Target}_resource.txt")
 
   file(REMOVE ${FileNameResourceNameHTMP})
   file(REMOVE ${FileNameResourceNameCTMP})
-  file(REMOVE ${FileNameResourceNameList})
 
   set(ContextAllH "")
   set(ContextAllC "")
@@ -65,7 +63,6 @@ const char* @FunctionName@()
 
     file(APPEND ${FileNameResourceNameHTMP} ${ContextH})
     file(APPEND ${FileNameResourceNameCTMP} ${ContextC})
-    file(APPEND ${FileNameResourceNameList} "${FileFullPath}\n")
   endforeach()
 
   FileCopyIsChanged(${FileNameResourceNameHTMP} ${FileNameResourceNameH})
@@ -73,16 +70,42 @@ const char* @FunctionName@()
 
   file(REMOVE ${FileNameResourceNameHTMP})
   file(REMOVE ${FileNameResourceNameCTMP})
+  
+  set(VersionSources1 ${FileNameResourceNameH} ${FileNameResourceNameC})
+  set(VersionSources ${VersionSources1} PARENT_SCOPE)
+endfunction()
 
-  set(VersionSources ${FileNameResourceNameH} ${FileNameResourceNameC})
+function(ResourceSourceCodeGenerationAddCustomCommand Target RepositoryDir OutDir)
+  message("ResourceSourceCodeGenerationAddCustomCommand: RepositoryDir111: ${RepositoryDir}")
+
+  set(RecourceFileList "${OutDir}/${Target}_resource.txt")
+  add_custom_command(TARGET ${Target} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RepositoryDir=${RepositoryDir}" -D"RecourceFileList=${RecourceFileList}" -P "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EnsureVersionCustomCommand.cmake"
+    COMMENT "Generate resource file by ${FileNameResourceNameList}"
+  )
+endfunction()
+
+function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
+  list(REMOVE_DUPLICATES ARGN)
+
+  message("ResourceSourceCodeGeneration: RepositoryDir111: ${RepositoryDir}")
+
+  set(VersionSources "")
+  ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${ARGN} ${VersionSources})
+
+  set(FileNameResourceNameList "${OutDir}/${Target}_resource.txt")
+
+  file(REMOVE ${FileNameResourceNameList})
+
+  foreach(FileFullPath ${ARGN})
+    file(APPEND ${FileNameResourceNameList} "${FileFullPath}\n")
+  endforeach()
+  
+  message("ResourceSourceCodeGeneration VersionSources: ${VersionSources}")
 
   target_include_directories(${Target} PRIVATE ${OutDir})
   target_sources(${Target} PRIVATE ${VersionSources})
   source_group("Generated" FILES ${VersionSources})
 
-  add_custom_command(TARGET ${Target} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RecourceFile=${FileNameResourceNameList}" -P "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EnsureVersionBuildAll.cmake"
-    COMMENT "Generate resource file by ${FileNameResourceNameList}"
-  )
-
+  ResourceSourceCodeGenerationAddCustomCommand(${Target} ${RepositoryDir} ${OutDir})
 endfunction()

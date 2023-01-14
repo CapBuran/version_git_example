@@ -54,28 +54,28 @@ function(AcquireRefName id)
   endif()
 endfunction()
 
-function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
+function(EnsureVersionInformationCustomCommand OutDir RepositoryDir)
+  message("EnsureVersionInformationCustomCommand_OutDir: ${OutDir}")
+
   if(NOT GIT_FOUND)
     find_package(Git)
   else()
     set(GIT_EXECUTABLE git CACHE)
   endif()
 
-  ReadVersionFromFile("${REPOSITORY_DIR}/VERSION" Version)
+  ReadVersionFromFile("${RepositoryDir}/VERSION" Version)
   AcquireGitlabPipelineBranchId(PipelineBranchId)
   AcquireProjectId(ProjectId)
   AcquireRefName(RefName)
   AcquireGitlabPipelineId(PipelineId)
-  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%ai" CommitterDate)
-  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%H"  AbbreviatedHash)
-  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%ae" AuthorName)
-  AcquireGitInformationFormat("${REPOSITORY_DIR}" "%s"  Subject)
+  AcquireGitInformationFormat("${RepositoryDir}" "%ai" CommitterDate)
+  AcquireGitInformationFormat("${RepositoryDir}" "%H"  AbbreviatedHash)
+  AcquireGitInformationFormat("${RepositoryDir}" "%ae" AuthorName)
+  AcquireGitInformationFormat("${RepositoryDir}" "%s"  Subject)
 
   if(ENABLE_TEST_BUILD)
     set(Version "${Version} - this is test build")
   endif()
-
-  set(VERSION_GEN_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
   string(TIMESTAMP Date "%Y-%m-%d")
   string(TIMESTAMP Time "%H:%M:%S")
@@ -139,11 +139,18 @@ function(EnsureVersionInformation TARGET_NAME REPOSITORY_DIR)
   string(REPLACE "PipelinVersioneBranchId" ${Version} GEN_CONTEXT ${GEN_CONTEXT})
   string(REPLACE "BuildDate" ${BuildDate} GEN_CONTEXT ${GEN_CONTEXT})
 
-  file(WRITE ${VERSION_GEN_OUT_DIR}/version_gen.xml ${XML_CONTEXT})
-  file(WRITE ${VERSION_GEN_OUT_DIR}/gitlab_gen.txt ${GEN_CONTEXT})
+  file(WRITE ${OutDir}/version_gen.xml ${XML_CONTEXT})
+  file(WRITE ${OutDir}/gitlab_gen.txt ${GEN_CONTEXT})
 
-  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/version_gen.xml)
-  list(APPEND FilesSRC ${VERSION_GEN_OUT_DIR}/gitlab_gen.txt)
+endfunction()
 
-  ResourceSourceCodeGeneration(${TARGET_NAME} ${VERSION_GEN_OUT_DIR} ${FilesSRC})
+function(EnsureVersionInformation TargetName RepositoryDir)
+  set(OutDir ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
+
+  EnsureVersionInformationCustomCommand(${OutDir} ${RepositoryDir})
+
+  list(APPEND FilesSRC ${OutDir}/version_gen.xml)
+  list(APPEND FilesSRC ${OutDir}/gitlab_gen.txt)
+
+  ResourceSourceCodeGeneration(${TargetName} ${RepositoryDir} ${OutDir} ${FilesSRC})
 endfunction()
