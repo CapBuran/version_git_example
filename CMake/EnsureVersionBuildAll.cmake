@@ -9,6 +9,8 @@ string(REPLACE "\\\n" "" Resurses ${Resurses})
 string(REPLACE "\n" ";" Resurses ${Resurses})
 list(REMOVE_ITEM Resurses "")
 
+cmake_policy(POP)
+
 foreach(FileFullPath ${Resurses})
   message("FileResource: ${FileFullPath}")
 endforeach()
@@ -22,8 +24,6 @@ set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
 set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
 set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
 set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
-
-message("FileNameResourceNameH: ${FileNameResourceNameH}")
 
 file(REMOVE ${FileNameResourceNameHTMP})
 file(REMOVE ${FileNameResourceNameCTMP})
@@ -66,12 +66,3 @@ file(REMOVE ${FileNameResourceNameCTMP})
 
 set(VersionSources ${FileNameResourceNameH} ${FileNameResourceNameC})
 
-
-#message("FileResourceFiles123: " ${FileResourceFiles})
-
-#
-
-#message("Version set") # For testing only
-
-
-cmake_policy(POP)
