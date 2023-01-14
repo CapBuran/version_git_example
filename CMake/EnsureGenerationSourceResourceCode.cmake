@@ -31,14 +31,18 @@ function(ResourceSourceCodeGeneration Target OutDir)
   set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
   set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
+  set(FileNameResourceNameList "${OutDir}/${Target}_resource.txt")
 
   file(REMOVE ${FileNameResourceNameHTMP})
   file(REMOVE ${FileNameResourceNameCTMP})
+  file(REMOVE ${FileNameResourceNameList})
 
   set(ContextAllH "")
   set(ContextAllC "")
 
   foreach(FileFullPath ${ARGN})
+    message("FileResource: ${FileFullPath}")
+
     get_filename_component(FileName ${FileFullPath} NAME)
     string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
@@ -61,6 +65,7 @@ const char* @FunctionName@()
 
     file(APPEND ${FileNameResourceNameHTMP} ${ContextH})
     file(APPEND ${FileNameResourceNameCTMP} ${ContextC})
+    file(APPEND ${FileNameResourceNameList} "${FileFullPath}\n")
   endforeach()
 
   FileCopyIsChanged(${FileNameResourceNameHTMP} ${FileNameResourceNameH})
@@ -74,5 +79,10 @@ const char* @FunctionName@()
   target_include_directories(${Target} PRIVATE ${OutDir})
   target_sources(${Target} PRIVATE ${VersionSources})
   source_group("Generated" FILES ${VersionSources})
+
+  add_custom_command(TARGET ${Target} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RecourceFile=${FileNameResourceNameList}" -P "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EnsureVersionBuildAll.cmake"
+    COMMENT "Generate resource file by ${FileNameResourceNameList}"
+  )
 
 endfunction()
