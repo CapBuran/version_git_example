@@ -1,4 +1,4 @@
-#include <version_git_example1_resource.h>
+#include <version_git_example1_versiongen_resources.h>
 
 #include <iostream>
 

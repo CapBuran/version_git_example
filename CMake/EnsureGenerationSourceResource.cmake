@@ -24,26 +24,25 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
 endfunction()
 
 function(ResourceSourceGenerationCustomCommand Target OutDir)
-  list(REMOVE_DUPLICATES ARGN)
+  message(STATUS "Generate resources for ${Target} in folder ${OutDir}")
 
-  set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
-  set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
+  get_filename_component(FolderName ${OutDir} NAME)
+
+  set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}_resources.h")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
-  set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
-
   file(REMOVE ${FileNameResourceNameHTMP})
-  file(REMOVE ${FileNameResourceNameCTMP})
 
-  set(ContextAllH "")
-  set(ContextAllC "")
+  foreach(FileToResource ${ARGN})
+    message(STATUS " FileToResource: ${FileToResource}")
 
-  foreach(FileFullPath ${ARGN})
-    message(" FileResource: ${FileFullPath}")
-
-    get_filename_component(FileName ${FileFullPath} NAME)
+    get_filename_component(FileName ${FileToResource} NAME)
     string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
-    file(READ ${FileFullPath} FileHEX HEX)
+    set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
+    set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
+    file(REMOVE ${FileNameResourceNameCTMP})
+
+    file(READ ${FileToResource} FileHEX HEX)
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FileHEX ${FileHEX})
 
     string(CONFIGURE [[
@@ -62,42 +61,55 @@ const char* @FunctionName@()
 
     file(APPEND ${FileNameResourceNameHTMP} ${ContextH})
     file(APPEND ${FileNameResourceNameCTMP} ${ContextC})
+
+    FileCopyIsChanged(${FileNameResourceNameCTMP} ${FileNameResourceNameC})
+
+    file(REMOVE ${FileNameResourceNameCTMP})
   endforeach()
 
   FileCopyIsChanged(${FileNameResourceNameHTMP} ${FileNameResourceNameH})
-  FileCopyIsChanged(${FileNameResourceNameCTMP} ${FileNameResourceNameC})
 
   file(REMOVE ${FileNameResourceNameHTMP})
-  file(REMOVE ${FileNameResourceNameCTMP})
-  
 endfunction()
 
 function(ResourceSourceGeneration Target RepositoryDir OutDir)
+  target_include_directories(${Target} PRIVATE ${OutDir})
+
   list(REMOVE_DUPLICATES ARGN)
 
+  set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommand.cmake)
+
   ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
-
-  set(FileNameResourceNameList "${OutDir}/${Target}_resource.txt")
-
-  file(REMOVE ${FileNameResourceNameList})
-
-  foreach(FileFullPath ${ARGN})
-    file(APPEND ${FileNameResourceNameList} "${FileFullPath}\n")
-  endforeach()
   
-  set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
-  set(FileNameResourceNameC "${OutDir}/${Target}_resource.cpp")
+  file(REMOVE ${CMakeCutomFile})
+  file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n\n")
 
-  target_include_directories(${Target} PRIVATE ${OutDir})
-  target_sources(${Target} PRIVATE ${FileNameResourceNameH} ${FileNameResourceNameC})
-  source_group("Generated" FILES ${FileNameResourceNameH} ${FileNameResourceNameC})
+  get_filename_component(FolderName ${OutDir} NAME)
 
-  set(RecourceFileList "${OutDir}/${Target}_resource.txt")
+  target_sources(${Target} PRIVATE "${OutDir}/${Target}_${FolderName}_resources.h")
+  source_group("Generated" FILES "${OutDir}/${Target}_${FolderName}_resources.h")
 
-  FileCopyIsChanged(${RepositoryDir}/CMake/EnsureResourceCustomCommand.cmake ${OutDir}/EnsureResourceCustomCommand.cmake)
+  foreach(FileToResource ${ARGN})
+    file(APPEND ${CMakeCutomFile} "list(APPEND FilesRC \"${FileToResource}\")\n")
+
+    get_filename_component(FileName ${FileToResource} NAME)
+    string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
+
+    set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
+
+    target_sources(${Target} PRIVATE ${FileNameResourceNameC})
+    source_group("Generated" FILES ${FileNameResourceNameC})
+
+  endforeach()
+
+  file(APPEND ${CMakeCutomFile} "\n")
+  string(CONFIGURE [[ResourceSourceGenerationCustomCommand("@Target@" "@OutDir@" ${FilesRC})]] ContextRC @ONLY)
+
+  file(APPEND ${CMakeCutomFile} ${ContextRC})
+  file(APPEND ${CMakeCutomFile} "\n")
 
   add_custom_command(TARGET ${Target} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RecourceFileList=${RecourceFileList}" -P "${OutDir}/EnsureResourceCustomCommand.cmake"
-    COMMENT "Generate resource file by ${FileNameResourceNameList}"
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"Target=${Target}" -P "${CMakeCutomFile}"
+    COMMENT "Generate resources files for ${Target} in ${CMakeCutomFile}"
   )
 endfunction()

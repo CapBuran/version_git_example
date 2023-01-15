@@ -1,5 +1,5 @@
 #include "lib.h"
-#include <version_git_example2_resource.h>
+#include <version_git_example2_versiongen_resources.h>
 
 #include <iostream>
 

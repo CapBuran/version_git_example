@@ -55,8 +55,6 @@ function(AcquireRefName id)
 endfunction()
 
 function(EnsureVersionInformationCustomCommand RepositoryDir OutDir)
-  message("EnsureVersionInformationCustomCommand_OutDir: ${OutDir}")
-
   if(NOT GIT_FOUND)
     find_package(Git)
   else()
@@ -153,4 +151,57 @@ function(EnsureVersionInformation TargetName RepositoryDir)
   list(APPEND FilesSRC ${OutDir}/gitlab_gen.txt)
 
   ResourceSourceGeneration(${TargetName} ${RepositoryDir} ${OutDir} ${FilesSRC})
+endfunction()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function(ResourceSourceGeneration1111 Target RepositoryDir OutDir)
+
+  set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommand.cmake)
+  
+  file(REMOVE ${CMakeCutomFile})
+  file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n")
+
+  ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${FileToResource})
+  file(APPEND ${CMakeCutomFile} "ResourceSourceGenerationCustomCommand(\"${Target}\" \"${OutDir}\" \"${OutDir}/version_gen.xml\;${OutDir}/gitlab_gen.xml\")\n")
+
+  get_filename_component(FileName ${OutDir} NAME)
+  set(FileNameResourceNameH "${OutDir}/${Target}_${FileName}_resource.h")
+  set(FileNameResourceNameC "${OutDir}/${Target}_${FileName}_resource.cpp")
+
+  target_include_directories(${Target} PRIVATE ${OutDir})
+  target_sources(${Target} PRIVATE ${FileNameResourceNameH} ${FileNameResourceNameC})
+  source_group("Generated" FILES ${FileNameResourceNameH} ${FileNameResourceNameC})
+
+  add_custom_command(TARGET ${Target} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"Target=${Target}" -D"OutDir=${OutDir}" -P "${CMakeCutomFile}"
+    COMMENT "Generate version file for ${TargetName}"
+  )
 endfunction()
