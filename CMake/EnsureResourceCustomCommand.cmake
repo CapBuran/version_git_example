@@ -1,4 +1,3 @@
-include(EnsureVersionInformation)
 include(EnsureGenerationSourceResource)
 
 cmake_policy(PUSH)
@@ -13,6 +12,6 @@ list(REMOVE_ITEM Resurses "")
 
 cmake_policy(POP)
 
-EnsureVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
+message("EnsureResourceCustomCommand.cmake ${Resurses}")
 
-ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${Resurses})
+ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${Resurses})

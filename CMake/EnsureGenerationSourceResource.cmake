@@ -23,7 +23,7 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 endfunction()
 
-function(ResourceSourceCodeGenerationCustomCommand Target OutDir)
+function(ResourceSourceGenerationCustomCommand Target OutDir)
   list(REMOVE_DUPLICATES ARGN)
 
   set(FileNameResourceNameH "${OutDir}/${Target}_resource.h")
@@ -72,18 +72,10 @@ const char* @FunctionName@()
   
 endfunction()
 
-function(ResourceSourceCodeGenerationAddCustomCommand Target RepositoryDir OutDir)
-  set(RecourceFileList "${OutDir}/${Target}_resource.txt")
-  add_custom_command(TARGET ${Target} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RepositoryDir=${RepositoryDir}" -D"RecourceFileList=${RecourceFileList}" -P "${RepositoryDir}/CMake/EnsureVersionCustomCommand.cmake"
-    COMMENT "Generate resource file by ${FileNameResourceNameList}"
-  )
-endfunction()
-
-function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
+function(ResourceSourceGeneration Target RepositoryDir OutDir)
   list(REMOVE_DUPLICATES ARGN)
 
-  ResourceSourceCodeGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
+  ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
 
   set(FileNameResourceNameList "${OutDir}/${Target}_resource.txt")
 
@@ -100,5 +92,12 @@ function(ResourceSourceCodeGeneration Target RepositoryDir OutDir)
   target_sources(${Target} PRIVATE ${FileNameResourceNameH} ${FileNameResourceNameC})
   source_group("Generated" FILES ${FileNameResourceNameH} ${FileNameResourceNameC})
 
-  ResourceSourceCodeGenerationAddCustomCommand(${Target} ${RepositoryDir} ${OutDir})
+  set(RecourceFileList "${OutDir}/${Target}_resource.txt")
+
+  FileCopyIsChanged(${RepositoryDir}/CMake/EnsureResourceCustomCommand.cmake ${OutDir}/EnsureResourceCustomCommand.cmake)
+
+  add_custom_command(TARGET ${Target} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"OutDir=${OutDir}" -D"Target=${Target}" -D"RecourceFileList=${RecourceFileList}" -P "${OutDir}/EnsureResourceCustomCommand.cmake"
+    COMMENT "Generate resource file by ${FileNameResourceNameList}"
+  )
 endfunction()

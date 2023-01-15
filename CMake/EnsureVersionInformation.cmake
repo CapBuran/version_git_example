@@ -152,5 +152,5 @@ function(EnsureVersionInformation TargetName RepositoryDir)
   list(APPEND FilesSRC ${OutDir}/version_gen.xml)
   list(APPEND FilesSRC ${OutDir}/gitlab_gen.txt)
 
-  ResourceSourceCodeGeneration(${TargetName} ${RepositoryDir} ${OutDir} ${FilesSRC})
+  ResourceSourceGeneration(${TargetName} ${RepositoryDir} ${OutDir} ${FilesSRC})
 endfunction()

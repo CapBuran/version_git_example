@@ -24,7 +24,7 @@ endif()
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
 include(EnsureVersionInformation)
-include(EnsureGenerationSourceResourceCode)
+include(EnsureGenerationSourceResource)
 
 file(GLOB ${PROJECT_NAME}_INC ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB ${PROJECT_NAME}_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
@@ -32,5 +32,7 @@ file(GLOB ${PROJECT_NAME}_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_INC} ${${PROJECT_NAME}_SRC})
 
 EnsureVersionInformation(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR})
+
+ResourceSourceGeneration(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE.TXT)
 
 add_subdirectory(second)
