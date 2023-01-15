@@ -73,21 +73,22 @@ const char* @FunctionName@()
 endfunction()
 
 function(ResourceSourceGeneration Target RepositoryDir OutDir)
-  target_include_directories(${Target} PRIVATE ${OutDir})
-
   list(REMOVE_DUPLICATES ARGN)
 
-  set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommand.cmake)
-
-  ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
-  
-  file(REMOVE ${CMakeCutomFile})
-  file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n\n")
+  target_include_directories(${Target} PRIVATE ${OutDir})
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  target_sources(${Target} PRIVATE "${OutDir}/${Target}_${FolderName}_resources.h")
-  source_group("Generated" FILES "${OutDir}/${Target}_${FolderName}_resources.h")
+  ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
+  
+  set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommand.cmake)
+
+  file(REMOVE ${CMakeCutomFile})
+  file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n\n")
+
+  set(FileNameResourcesNameH "${OutDir}/${Target}_${FolderName}_resources.h")
+  target_sources(${Target} PRIVATE ${FileNameResourcesNameH})
+  source_group("Generated" FILES ${FileNameResourcesNameH})
 
   foreach(FileToResource ${ARGN})
     file(APPEND ${CMakeCutomFile} "list(APPEND FilesRC \"${FileToResource}\")\n")
@@ -109,7 +110,29 @@ function(ResourceSourceGeneration Target RepositoryDir OutDir)
   file(APPEND ${CMakeCutomFile} "\n")
 
   add_custom_command(TARGET ${Target} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -D"Target=${Target}" -P "${CMakeCutomFile}"
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
     COMMENT "Generate resources files for ${Target} in ${CMakeCutomFile}"
   )
+endfunction()
+
+function(ResourceSourceGenerationNoCreateCustomCommand Target RepositoryDir OutDir)
+  list(REMOVE_DUPLICATES ARGN)
+
+  target_include_directories(${Target} PRIVATE ${OutDir})
+
+  get_filename_component(FolderName ${OutDir} NAME)
+
+  ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${ARGN})
+  
+  set(FileNameResourcesNameH "${OutDir}/${Target}_${FolderName}_resources.h")
+  target_sources(${Target} PRIVATE ${FileNameResourcesNameH})
+  source_group("Generated" FILES ${FileNameResourcesNameH})
+
+  foreach(FileToResource ${ARGN})
+    get_filename_component(FileName ${FileToResource} NAME)
+    string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
+    set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
+    target_sources(${Target} PRIVATE ${FileNameResourceNameC})
+    source_group("Generated" FILES ${FileNameResourceNameC})
+  endforeach()
 endfunction()

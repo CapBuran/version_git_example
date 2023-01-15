@@ -142,15 +142,49 @@ function(EnsureVersionInformationCustomCommand RepositoryDir OutDir)
 
 endfunction()
 
-function(EnsureVersionInformation TargetName RepositoryDir)
+function(EnsureVersionInformation Target RepositoryDir)
+
   set(OutDir ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
   EnsureVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
 
+  get_filename_component(FolderName ${OutDir} NAME)
+
   list(APPEND FilesSRC ${OutDir}/version_gen.xml)
   list(APPEND FilesSRC ${OutDir}/gitlab_gen.txt)
 
-  ResourceSourceGeneration(${TargetName} ${RepositoryDir} ${OutDir} ${FilesSRC})
+  ResourceSourceGenerationNoCreateCustomCommand(${Target} ${RepositoryDir} ${OutDir} ${FilesSRC})
+  
+  set(CMakeCutomFile "${OutDir}/EnsureVersion_${FolderName}.cmake")
+  file(REMOVE ${CMakeCutomFile})
+  file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n")
+  file(APPEND ${CMakeCutomFile} "include(EnsureVersionInformation)\n\n")
+
+  set(FileNameResourcesNameH "${OutDir}/${Target}_${FolderName}_resources.h")
+  target_sources(${Target} PRIVATE ${FileNameResourcesNameH})
+  source_group("Generated" FILES ${FileNameResourcesNameH})
+
+  foreach(FileToResource ${FilesSRC})
+    file(APPEND ${CMakeCutomFile} "list(APPEND FilesRC \"${FileToResource}\")\n")
+  endforeach()
+
+  file(APPEND ${CMakeCutomFile} "\n")
+
+  string(CONFIGURE [[EnsureVersionInformationCustomCommand("@RepositoryDir@" "@OutDir@")]] ContextRC @ONLY)
+  file(APPEND ${CMakeCutomFile} ${ContextRC})
+
+  file(APPEND ${CMakeCutomFile} "\n")
+
+  string(CONFIGURE [[ResourceSourceGenerationCustomCommand("@Target@" "@OutDir@" ${FilesRC})]] ContextRC @ONLY)
+  file(APPEND ${CMakeCutomFile} ${ContextRC})
+
+  file(APPEND ${CMakeCutomFile} "\n")
+
+  add_custom_command(TARGET ${Target} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
+    COMMENT "Generate resources files for ${Target} in ${CMakeCutomFile}"
+  )
+
 endfunction()
 
 
