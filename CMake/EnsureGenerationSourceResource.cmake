@@ -43,18 +43,65 @@ function(ResourceSourceGenerationCustomCommand Target OutDir)
     file(REMOVE ${FileNameResourceNameCTMP})
 
     file(READ ${FileToResource} FileHEX HEX)
-    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FileHEX ${FileHEX})
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6, 0x\\7, 0x\\8, 0x\\9, \\n" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6, 0x\\7, 0x\\8" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6, 0x\\7" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3, 0x\\4" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2, 0x\\3" FileHEX ${FileHEX}
+    )
+    string(
+      REGEX REPLACE
+      "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
+      "0x\\1, 0x\\2" FileHEX ${FileHEX}
+    )
 
     string(CONFIGURE [[
 const char* @FunctionName@()\;
+unsigned long long @FunctionName@_size()\;
 ]] ContextH)
 
     string(CONFIGURE [==[
-const unsigned char @FunctionName@_Data[] = {@FileHEX@}\;
+const unsigned char @FunctionName@_Data[] = {
+@FileHEX@
+}\;
 
 const char* @FunctionName@()
 {
   return reinterpret_cast<const char*>(&@FunctionName@_Data[0])\;
+}
+
+unsigned long long @FunctionName@_size()
+{
+  return sizeof(@FunctionName@_Data)\;
 }
 
 ]==] ContextC)
