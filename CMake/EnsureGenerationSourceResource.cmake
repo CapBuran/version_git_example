@@ -75,7 +75,7 @@ function(ResourceSourceGeneration Target RepositoryDir OutDir)
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}_resources.h")
+  set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}.h")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
   file(REMOVE ${FileNameResourceNameHTMP})
 
