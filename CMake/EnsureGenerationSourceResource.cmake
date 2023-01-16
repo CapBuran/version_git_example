@@ -37,47 +37,12 @@ function(ResourceSourceGenerationCustomCommand Target OutDir FileToResource)
   file(REMOVE ${FileNameResourceNameCTMP})
 
   file(READ ${FileToResource} FileHEX HEX)
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6, 0x\\7, 0x\\8, \\n" FileHEX ${FileHEX}
+  string(REGEX REPLACE
+    "([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])"
+    "  \\1\\n  " FileHEX ${FileHEX}
   )
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6, 0x\\7" FileHEX ${FileHEX}
-  )
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5, 0x\\6" FileHEX ${FileHEX}
-  )
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2, 0x\\3, 0x\\4, 0x\\5" FileHEX ${FileHEX}
-  )
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2, 0x\\3, 0x\\4" FileHEX ${FileHEX}
-  )
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2, 0x\\3" FileHEX ${FileHEX}
-  )
-  string(
-    REGEX REPLACE
-    "([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])"
-    "Y0x\\1, 0x\\2" FileHEX ${FileHEX}
-    )
-  string(
-    REGEX REPLACE
-    "\n([0-9a-f][0-9a-f])"
-    "\nY0x\\1" FileHEX ${FileHEX}
-  )
-  string(REPLACE "Y" "  " FileHEX ${FileHEX} )
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FileHEX ${FileHEX})
+  string(REPLACE "    " "  " FileHEX ${FileHEX})
 
   string(CONFIGURE [==[
 const unsigned char @FunctionName@_Data[] = {
