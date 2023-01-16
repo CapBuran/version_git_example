@@ -78,7 +78,7 @@ function(ResourceSourceGeneration Target RepositoryDir OutDir)
   set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}_resources.h")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
   file(REMOVE ${FileNameResourceNameHTMP})
-  
+
   if(EXISTS ${FileNameResourceNameH})
     file(COPY_FILE ${FileNameResourceNameH} ${FileNameResourceNameHTMP})
   endif()
@@ -128,9 +128,10 @@ unsigned long long @FunctionName@_size()
     file(APPEND ${FileNameResourceNameHTMP} "${Line};\n")
   endforeach()
 
-  target_sources(${Target} PRIVATE ${FileNameResourcesNameH})
-  source_group("Generated" FILES ${FileNameResourcesNameH})
-
   FileCopyIsChanged(${FileNameResourceNameHTMP} ${FileNameResourceNameH})
+
+  target_sources(${Target} PRIVATE ${FileNameResourceNameH})
+  source_group("Generated" FILES ${FileNameResourceNameH})
+
   file(REMOVE ${FileNameResourceNameHTMP})
 endfunction()

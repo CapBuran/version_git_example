@@ -160,10 +160,6 @@ function(EnsureVersionInformation Target RepositoryDir)
   file(APPEND ${CMakeCutomFile} "include(EnsureVersionInformation)\n")
   file(APPEND ${CMakeCutomFile} "EnsureVersionInformationCustomCommand(\"${RepositoryDir}\" \"${OutDir}\")\n")
 
-  set(FileNameResourcesNameH "${OutDir}/${Target}_${FolderName}_resources.h")
-  target_sources(${Target} PRIVATE ${FileNameResourcesNameH})
-  source_group("Generated" FILES ${FileNameResourcesNameH})
-
   add_custom_command(TARGET ${Target} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
     COMMENT "Generate resources files for ${Target} in ${CMakeCutomFile}"
