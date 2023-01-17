@@ -155,7 +155,7 @@ function(EnsureVersionInformation Target RepositoryDir)
 #ifdef GNUC
 #static const volatile char BuildVersion[]  attribute((section("VERSION_TEXT"))) = MACRO_ARRAY;
 #endif
-  set(Additional "#ifdef GNUC^[NewLine]static const volatile char BuildVersion[] attribute((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = MACRO_ARRAY^[Semicolon]^[NewLine]#endif^[NewLine]")
+  set(Additional "#ifdef GNUC^[NewLine]static const volatile char BuildVersion[] attribute((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = { MACRO_ARRAY }^[Semicolon]^[NewLine]#endif^[NewLine]")
 
   ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
   
