@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.21.0)
+
 set(EmptyAdditionalValue "EmPtY")
 
 #Replace for symbols:
