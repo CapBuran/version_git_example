@@ -1,3 +1,14 @@
+set(EmptyAdditionalValue "EmPtY")
+
+#Replace for symbols:
+#^[SingleQuote] '
+#^[DoubleQuote] "
+#^[BackSlash] \
+#^[NewLine] /n
+#^[Tab)] /t
+#^[Dollar] $
+#^[Section] $
+#^[Semicolon] ;
 
 function(FileCopyIsChanged FullPathSrc FullPathDst)
   set(IsChanged 0)
@@ -24,7 +35,7 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 endfunction()
 
-function(ResourceSourceGenerationCustomCommand Target OutDir FileToResource)
+function(ResourceSourceGenerationCustomCommand Target OutDir Additional FileToResource)
   message(STATUS "Generate resources for ${Target} in folder ${OutDir} for ${FileToResource}")
 
   get_filename_component(FolderName ${OutDir} NAME)
@@ -39,15 +50,18 @@ function(ResourceSourceGenerationCustomCommand Target OutDir FileToResource)
   file(READ ${FileToResource} FileHEX HEX)
   string(REGEX REPLACE
     "([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])"
-    "  \\1\\n  " FileHEX ${FileHEX}
+    "  \\1\\\\\\n  " FileHEX ${FileHEX}
   )
   string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FileHEX ${FileHEX})
   string(REPLACE "    " "  " FileHEX ${FileHEX})
 
   string(CONFIGURE [==[
-const unsigned char @FunctionName@_Data[] = {
+#define MACRO_ARRAY \
 @FileHEX@
-}\;
+
+static const unsigned char @FunctionName@_Data[] = { MACRO_ARRAY }\;
+
+static const char @FunctionName@_ZeroChar = '\0'\;
 
 const char* @FunctionName@()
 {
@@ -63,12 +77,24 @@ unsigned long long @FunctionName@_size()
 
   file(APPEND ${FileNameResourceNameCTMP} ${ContextC})
 
+  if(NOT ${Additional} STREQUAL ${EmptyAdditionalValue})
+    string(REPLACE "^[SingleQuote]" "'" Additional ${Additional})
+    string(REPLACE "^[DoubleQuote]" "\"" Additional ${Additional})
+    string(REPLACE "^[BackSlash]" "\\" Additional ${Additional})
+    string(REPLACE "^[NewLine]" "\n" Additional ${Additional})
+    string(REPLACE "^[Tab]" "\t" Additional ${Additional})
+    string(REPLACE "^[Dollar]" "$" Additional ${Additional})
+    string(REPLACE "^[Section]" "$" Additional ${Additional})
+    string(REPLACE "^[Semicolon]" "\;" Additional ${Additional})
+    file(APPEND ${FileNameResourceNameCTMP} ${Additional})
+  endif()
+
   FileCopyIsChanged(${FileNameResourceNameCTMP} ${FileNameResourceNameC})
 
   file(REMOVE ${FileNameResourceNameCTMP})
 endfunction()
 
-function(ResourceSourceGeneration Target RepositoryDir OutDir)
+function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Additional)
   list(REMOVE_DUPLICATES ARGN)
 
   target_include_directories(${Target} PRIVATE ${OutDir})
@@ -86,7 +112,7 @@ function(ResourceSourceGeneration Target RepositoryDir OutDir)
   foreach(FileToResource ${ARGN})
     get_filename_component(FileName ${FileToResource} NAME)
 
-    ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${FileToResource})
+    ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${Additional} ${FileToResource})
 
     set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommandFor_${FileName}.cmake)
     set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
@@ -101,7 +127,7 @@ unsigned long long @FunctionName@_size()
 
     file(REMOVE ${CMakeCutomFile})
     file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n")
-    file(APPEND ${CMakeCutomFile} "ResourceSourceGenerationCustomCommand(\"${Target}\" \"${OutDir}\" \"${FileToResource}\")\n")
+    file(APPEND ${CMakeCutomFile} "ResourceSourceGenerationCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${FileToResource}\")\n")
 
     target_sources(${Target} PRIVATE ${FileNameResourceNameC})
     source_group("Generated" FILES ${FileNameResourceNameC})
@@ -134,4 +160,8 @@ unsigned long long @FunctionName@_size()
   source_group("Generated" FILES ${FileNameResourceNameH})
 
   file(REMOVE ${FileNameResourceNameHTMP})
+endfunction()
+
+function(ResourceSourceGeneration Target RepositoryDir OutDir)
+  ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
 endfunction()

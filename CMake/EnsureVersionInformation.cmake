@@ -150,10 +150,14 @@ function(EnsureVersionInformation Target RepositoryDir)
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  list(APPEND FilesSRC ${OutDir}/version_gen.xml)
-  list(APPEND FilesSRC ${OutDir}/gitlab_gen.txt)
+  ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${OutDir}/gitlab_gen.txt)
 
-  ResourceSourceGeneration(${Target} ${RepositoryDir} ${OutDir} ${FilesSRC})
+#ifdef GNUC
+#static const volatile char BuildVersion[]  attribute((section("VERSION_TEXT"))) = MACRO_ARRAY;
+#endif
+  set(Additional "#ifdef GNUC^[NewLine]static const volatile char BuildVersion[] attribute((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = MACRO_ARRAY^[Semicolon]^[NewLine]#endif^[NewLine]")
+
+  ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
   
   set(CMakeCutomFile "${OutDir}/EnsureVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})
