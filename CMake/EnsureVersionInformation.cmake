@@ -166,7 +166,7 @@ function(EnsureVersionInformation Target RepositoryDir)
 
   add_custom_command(TARGET ${Target} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
-    COMMENT "Generate resources files for ${Target} in ${CMakeCutomFile}"
+    COMMENT "Generate version files for ${Target}"
   )
 
 endfunction()

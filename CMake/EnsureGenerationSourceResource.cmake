@@ -35,11 +35,11 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
 
   if(IsChanged)
     file(COPY_FILE ${FullPathSrc} ${FullPathDst})
+    message(STATUS "Update file: ${FullPathDst}")
   endif()
 endfunction()
 
 function(ResourceSourceGenerationCustomCommand Target OutDir Additional FileToResource)
-  message(STATUS "Generate resources for ${Target} in folder ${OutDir} for ${FileToResource}")
 
   get_filename_component(FolderName ${OutDir} NAME)
 
@@ -127,10 +127,12 @@ function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Addition
   foreach(FileToResource ${ARGN})
     get_filename_component(FileName ${FileToResource} NAME)
 
-    ResourceSourceGenerationCustomCommand(${Target} ${OutDir} ${Additional} ${FileToResource})
-
     set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommandFor_${FileName}.cmake)
     set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
+
+    if(NOT EXISTS ${FileNameResourceNameC})
+      file(WRITE ${FileNameResourceNameC} "\n")
+    endif()
 
     string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
@@ -144,13 +146,13 @@ unsigned long long @FunctionName@_size()
     file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n")
     file(APPEND ${CMakeCutomFile} "ResourceSourceGenerationCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${FileToResource}\")\n")
 
+    target_sources(${Target} PRIVATE ${FileToResource})
     target_sources(${Target} PRIVATE ${FileNameResourceNameC})
     source_group("Generated" FILES ${FileNameResourceNameC})
 
     add_custom_command(
       OUTPUT ${FileNameResourceNameC}
       COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
-      COMMENT "Generate resources file ${FileName} for ${Target} in ${CMakeCutomFile}"
       DEPENDS ${FileToResource}
     )
   endforeach()
@@ -164,7 +166,6 @@ function(ResourceSourceGeneration Target RepositoryDir OutDir)
 endfunction()
 
 function(ResourceSourceGenerationFinalize)
-  file(REMOVE ${DDD})
   if(EnsureGenerationSourceResourceCACHE)
     list(REMOVE_DUPLICATES EnsureGenerationSourceResourceCACHE)
     foreach(HeaderFile ${EnsureGenerationSourceResourceCACHE})
