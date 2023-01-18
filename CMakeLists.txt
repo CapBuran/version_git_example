@@ -42,3 +42,5 @@ list(APPEND RES ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE4.TXT)
 ResourceSourceGeneration(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${RES})
 
 add_subdirectory(second)
+
+ResourceSourceGenerationFinalize()

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21.0)
 
 set(EmptyAdditionalValue "EmPtY")
+set(SuffixTMP "TMP")
 
 #Replace for symbols:
 #^[SingleQuote] '
@@ -46,7 +47,7 @@ function(ResourceSourceGenerationCustomCommand Target OutDir Additional FileToRe
   string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
   set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
-  set(FileNameResourceNameCTMP "${FileNameResourceNameC}TMP")
+  set(FileNameResourceNameCTMP "${FileNameResourceNameC}{SuffixTMP}")
   file(REMOVE ${FileNameResourceNameCTMP})
 
   file(READ ${FileToResource} FileHEX HEX)
@@ -104,12 +105,19 @@ function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Addition
   get_filename_component(FolderName ${OutDir} NAME)
 
   set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}.h")
-  set(FileNameResourceNameHTMP "${FileNameResourceNameH}TMP")
-  file(REMOVE ${FileNameResourceNameHTMP})
+  set(FileNameResourceNameHTMP "${FileNameResourceNameH}${SuffixTMP}")
 
-  if(EXISTS ${FileNameResourceNameH})
-    file(COPY_FILE ${FileNameResourceNameH} ${FileNameResourceNameHTMP})
+  set(EnsureGenerationSourceResourceCopyCACHE "")
+
+  if(EnsureGenerationSourceResourceCACHE)
+    foreach(HeaderFile ${EnsureGenerationSourceResourceCACHE})
+      list(APPEND EnsureGenerationSourceResourceCopyCACHE ${HeaderFile})
+    endforeach()
   endif()
+
+  list(APPEND EnsureGenerationSourceResourceCopyCACHE ${FileNameResourceNameH})
+
+  set(EnsureGenerationSourceResourceCACHE ${EnsureGenerationSourceResourceCopyCACHE} CACHE STRING "11" FORCE)
 
   foreach(FileToResource ${ARGN})
     get_filename_component(FileName ${FileToResource} NAME)
@@ -142,28 +150,29 @@ unsigned long long @FunctionName@_size()
     )
   endforeach()
 
-  file(STRINGS ${FileNameResourceNameHTMP} ContentH)
-
-  foreach(Line ${ContentH})
-    string(REPLACE ";" "" Line ${Line})
-    string(REPLACE "\\" "" Line ${Line})
-    list(APPEND ContentNewH ${Line})
-  endforeach()
-  list(REMOVE_DUPLICATES ContentNewH)
-  list(SORT ContentNewH)
-  file(REMOVE ${FileNameResourceNameHTMP})
-  foreach(Line ${ContentNewH})
-    file(APPEND ${FileNameResourceNameHTMP} "${Line};\n")
-  endforeach()
-
-  FileCopyIsChanged(${FileNameResourceNameHTMP} ${FileNameResourceNameH})
-
   target_sources(${Target} PRIVATE ${FileNameResourceNameH})
   source_group("Generated" FILES ${FileNameResourceNameH})
-
-  file(REMOVE ${FileNameResourceNameHTMP})
 endfunction()
 
 function(ResourceSourceGeneration Target RepositoryDir OutDir)
   ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
+endfunction()
+
+function(ResourceSourceGenerationFinalize)
+  if(EnsureGenerationSourceResourceCACHE)
+    list(REMOVE_DUPLICATES EnsureGenerationSourceResourceCACHE)
+    foreach(HeaderFile ${EnsureGenerationSourceResourceCACHE})
+      if(EXISTS "${HeaderFile}${SuffixTMP}")
+        file(STRINGS "${HeaderFile}${SuffixTMP}" ContentH)
+        list(REMOVE_DUPLICATES ContentH)
+        foreach(Line ${ContentH})
+          file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "${Line};\n")
+        endforeach()
+        FileCopyIsChanged("${HeaderFile}${SuffixTMP}${SuffixTMP}" ${HeaderFile})
+      endif()
+      file(REMOVE "${HeaderFile}${SuffixTMP}")
+      file(REMOVE "${HeaderFile}${SuffixTMP}${SuffixTMP}")
+    endforeach()
+    unset(EnsureGenerationSourceResourceCACHE CACHE)
+  endif()
 endfunction()
