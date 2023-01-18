@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21.0)
+cmake_minimum_required(VERSION 3.19.8)
 
 set(EmptyAdditionalValue "EmPtY")
 set(SuffixTMP "TMP")
@@ -34,7 +34,7 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 
   if(IsChanged)
-    file(COPY_FILE ${FullPathSrc} ${FullPathDst})
+    configure_file(${FullPathSrc} ${FullPathDst} COPYONLY)
     message(STATUS "Update file: ${FullPathDst}")
   endif()
 endfunction()
