@@ -54,7 +54,7 @@ function(AcquireRefName id)
   endif()
 endfunction()
 
-function(EnsureVersionInformationCustomCommand RepositoryDir OutDir)
+function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
   if(NOT GIT_FOUND)
     find_package(Git)
   else()
@@ -142,27 +142,27 @@ function(EnsureVersionInformationCustomCommand RepositoryDir OutDir)
 
 endfunction()
 
-function(EnsureVersionInformation Target RepositoryDir)
+function(EmbedVersionInformation Target RepositoryDir)
 
   set(OutDir ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
-  EnsureVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
+  EmbedVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${OutDir}/gitlab_gen.txt)
+  GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${OutDir}/gitlab_gen.txt)
 
 #ifdef GNUC
 #static const volatile char BuildVersion[]  attribute((section("VERSION_TEXT"))) = MACRO_ARRAY;
 #endif
   set(Additional "#ifdef GNUC^[NewLine]static const volatile char BuildVersion[] attribute((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = { MACRO_ARRAY }^[Semicolon]^[NewLine]#endif^[NewLine]")
 
-  ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
+  GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
   
-  set(CMakeCutomFile "${OutDir}/EnsureVersion_${Target}.cmake")
+  set(CMakeCutomFile "${OutDir}/EmbedVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})
-  file(APPEND ${CMakeCutomFile} "include(EnsureVersionInformation)\n")
-  file(APPEND ${CMakeCutomFile} "EnsureVersionInformationCustomCommand(\"${RepositoryDir}\" \"${OutDir}\")\n")
+  file(APPEND ${CMakeCutomFile} "include(EmbedVersionInformation)\n")
+  file(APPEND ${CMakeCutomFile} "EmbedVersionInformationCustomCommand(\"${RepositoryDir}\" \"${OutDir}\")\n")
 
   add_custom_command(TARGET ${Target} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"

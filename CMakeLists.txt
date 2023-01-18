@@ -23,24 +23,24 @@ endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
-include(EnsureVersionInformation)
-include(EnsureGenerationSourceResource)
+include(EmbedVersionInformation)
+include(GeneratorResourceCode)
 
 file(GLOB ${PROJECT_NAME}_INC ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB ${PROJECT_NAME}_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_INC} ${${PROJECT_NAME}_SRC})
 
-EnsureVersionInformation(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR})
+EmbedVersionInformation(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR})
 
-ResourceSourceGeneration(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE.TXT)
-ResourceSourceGeneration(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE2.TXT)
+GenerateResource(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE.TXT)
+GenerateResource(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE2.TXT)
 
 list(APPEND RES ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE3.TXT)
 list(APPEND RES ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE4.TXT)
 
-ResourceSourceGeneration(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${RES})
+GenerateResource(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/gen ${RES})
 
 add_subdirectory(second)
 
-ResourceSourceGenerationFinalize()
+GenerateResourceFinalize()

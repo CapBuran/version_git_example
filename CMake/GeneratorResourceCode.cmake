@@ -39,7 +39,7 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 endfunction()
 
-function(ResourceSourceGenerationCustomCommand Target OutDir Additional FileToResource)
+function(GenerateResourceCustomCommand Target OutDir Additional FileToResource)
 
   get_filename_component(FolderName ${OutDir} NAME)
 
@@ -76,9 +76,9 @@ unsigned long long @FunctionName@_size()
   return sizeof(@FunctionName@_Data)\;
 }
 
-]==] ContextC)
+]==] ContentC)
 
-  file(APPEND ${FileNameResourceNameCTMP} ${ContextC})
+  file(APPEND ${FileNameResourceNameCTMP} ${ContentC})
 
   if(NOT ${Additional} STREQUAL ${EmptyAdditionalValue})
     string(REPLACE "^[SingleQuote]" "'" Additional ${Additional})
@@ -97,7 +97,7 @@ unsigned long long @FunctionName@_size()
   file(REMOVE ${FileNameResourceNameCTMP})
 endfunction()
 
-function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Additional)
+function(GenerateResourceAdditional Target RepositoryDir OutDir Additional)
   list(REMOVE_DUPLICATES ARGN)
 
   list(LENGTH ARGN LengyhARGN)
@@ -112,22 +112,22 @@ function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Addition
   set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}.h")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}${SuffixTMP}")
 
-  set(EnsureGenerationSourceResourceCopyCACHE "")
+  set(ResourceHeadersListCopyCACHE "")
 
-  if(EnsureGenerationSourceResourceCACHE)
-    foreach(HeaderFile ${EnsureGenerationSourceResourceCACHE})
-      list(APPEND EnsureGenerationSourceResourceCopyCACHE ${HeaderFile})
+  if(ResourceHeadersListCACHE)
+    foreach(HeaderFile ${ResourceHeadersListCACHE})
+      list(APPEND ResourceHeadersListCopyCACHE ${HeaderFile})
     endforeach()
   endif()
 
-  list(APPEND EnsureGenerationSourceResourceCopyCACHE ${FileNameResourceNameH})
+  list(APPEND ResourceHeadersListCopyCACHE ${FileNameResourceNameH})
 
-  set(EnsureGenerationSourceResourceCACHE ${EnsureGenerationSourceResourceCopyCACHE} CACHE STRING "11" FORCE)
+  set(ResourceHeadersListCACHE ${ResourceHeadersListCopyCACHE} CACHE STRING "11" FORCE)
 
   foreach(FileToResource ${ARGN})
     get_filename_component(FileName ${FileToResource} NAME)
 
-    set(CMakeCutomFile ${OutDir}/EnsureResourceCustomCommandFor_${FileName}.cmake)
+    set(CMakeCutomFile ${OutDir}/GenerateResourceCustomCommandFor_${FileName}.cmake)
     set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
 
     if(NOT EXISTS ${FileNameResourceNameC})
@@ -139,12 +139,12 @@ function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Addition
     string(CONFIGURE [[
 const char* @FunctionName@()
 unsigned long long @FunctionName@_size()
-]] ContextH)
-    file(APPEND ${FileNameResourceNameHTMP} ${ContextH})
+]] ContentH)
+    file(APPEND ${FileNameResourceNameHTMP} ${ContentH})
 
     file(REMOVE ${CMakeCutomFile})
-    file(APPEND ${CMakeCutomFile} "include(EnsureGenerationSourceResource)\n")
-    file(APPEND ${CMakeCutomFile} "ResourceSourceGenerationCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${FileToResource}\")\n")
+    file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
+    file(APPEND ${CMakeCutomFile} "GenerateResourceCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${FileToResource}\")\n")
 
     target_sources(${Target} PRIVATE ${FileToResource})
     target_sources(${Target} PRIVATE ${FileNameResourceNameC})
@@ -161,14 +161,14 @@ unsigned long long @FunctionName@_size()
   source_group("Generated" FILES ${FileNameResourceNameH})
 endfunction()
 
-function(ResourceSourceGeneration Target RepositoryDir OutDir)
-  ResourceSourceGenerationAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
+function(GenerateResource Target RepositoryDir OutDir)
+  GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
 endfunction()
 
-function(ResourceSourceGenerationFinalize)
-  if(EnsureGenerationSourceResourceCACHE)
-    list(REMOVE_DUPLICATES EnsureGenerationSourceResourceCACHE)
-    foreach(HeaderFile ${EnsureGenerationSourceResourceCACHE})
+function(GenerateResourceFinalize)
+  if(ResourceHeadersListCACHE)
+    list(REMOVE_DUPLICATES ResourceHeadersListCACHE)
+    foreach(HeaderFile ${ResourceHeadersListCACHE})
       if(EXISTS "${HeaderFile}${SuffixTMP}")
         file(STRINGS "${HeaderFile}${SuffixTMP}" ContentH)
         list(REMOVE_DUPLICATES ContentH)
@@ -180,6 +180,6 @@ function(ResourceSourceGenerationFinalize)
       file(REMOVE "${HeaderFile}${SuffixTMP}")
       file(REMOVE "${HeaderFile}${SuffixTMP}${SuffixTMP}")
     endforeach()
-    unset(EnsureGenerationSourceResourceCACHE CACHE)
+    unset(ResourceHeadersListCACHE CACHE)
   endif()
 endfunction()
