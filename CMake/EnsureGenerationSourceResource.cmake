@@ -100,6 +100,11 @@ endfunction()
 function(ResourceSourceGenerationAdditional Target RepositoryDir OutDir Additional)
   list(REMOVE_DUPLICATES ARGN)
 
+  list(LENGTH ARGN LengyhARGN)
+  if(${LengyhARGN} EQUAL 0)
+    return()
+  endif()
+
   target_include_directories(${Target} PRIVATE ${OutDir})
 
   get_filename_component(FolderName ${OutDir} NAME)
@@ -159,6 +164,7 @@ function(ResourceSourceGeneration Target RepositoryDir OutDir)
 endfunction()
 
 function(ResourceSourceGenerationFinalize)
+  file(REMOVE ${DDD})
   if(EnsureGenerationSourceResourceCACHE)
     list(REMOVE_DUPLICATES EnsureGenerationSourceResourceCACHE)
     foreach(HeaderFile ${EnsureGenerationSourceResourceCACHE})
