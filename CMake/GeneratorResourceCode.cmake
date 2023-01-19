@@ -51,20 +51,20 @@ function(GenerateResourceCustomCommand Target OutDir Additional FileToResource)
   file(REMOVE ${FileNameResourceNameCTMP})
 
   file(READ ${FileToResource} FileHEX HEX)
+  set(FileHEX ${FileHEX}Y)
   string(REGEX REPLACE
     "([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])"
     "  \\1\\\\\\n  " FileHEX ${FileHEX}
   )
   string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FileHEX ${FileHEX})
   string(REPLACE "    " "  " FileHEX ${FileHEX})
+  string(REPLACE "Y" "0x00" FileHEX ${FileHEX})
 
   string(CONFIGURE [==[
 #define MACRO_ARRAY \
 @FileHEX@
 
 static const unsigned char @FunctionName@_Data[] = { MACRO_ARRAY }\;
-
-static const char @FunctionName@_ZeroChar = '\0'\;
 
 const char* @FunctionName@()
 {
@@ -73,7 +73,7 @@ const char* @FunctionName@()
 
 unsigned long long @FunctionName@_size()
 {
-  return sizeof(@FunctionName@_Data)\;
+  return sizeof(@FunctionName@_Data) - 1\;
 }
 
 ]==] ContentC)
