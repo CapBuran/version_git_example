@@ -67,8 +67,10 @@ function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
   AcquireRefName(RefName)
   AcquireGitlabPipelineId(PipelineId)
   AcquireGitInformationFormat("${RepositoryDir}" "%ai" CommitterDate)
-  AcquireGitInformationFormat("${RepositoryDir}" "%H"  AbbreviatedHash)
-  AcquireGitInformationFormat("${RepositoryDir}" "%ae" AuthorName)
+  AcquireGitInformationFormat("${RepositoryDir}" "%H"  AbbreviatedHashBig)
+  AcquireGitInformationFormat("${RepositoryDir}" "%h"  AbbreviatedHashSmall)
+  AcquireGitInformationFormat("${RepositoryDir}" "%ct" TimeStamp)
+  AcquireGitInformationFormat("${RepositoryDir}" "%an" AuthorName)
   AcquireGitInformationFormat("${RepositoryDir}" "%s"  Subject)
 
   if(ENABLE_TEST_BUILD)
@@ -85,57 +87,25 @@ function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
 
   set(BuildDate "${Date} ${Time} ${TimeZone}")
 
-  set(XML_CONTEXT 
-[==[
-    <VersionInfo>
-      <FileVersion>
-        PipelinVersioneBranchId-PipelineBranchId.PipelineId
-      </FileVersion>
-      <ProductVersion>
-        PipelinVersioneBranchId-PipelineBranchId.PipelineId
-      </ProductVersion>
-      <Timestamp>
-        CommitterDate
-      </Timestamp>
-      <Comment>
-        Subject
-      </Comment>
-    </VersionInfo>
-]==]
-  )
+  string(CONFIGURE [==[
+<VersionInfo>
+  <FileVersion>@Version@</FileVersion>
+  <ProductVersion>@Version@</ProductVersion>
+  <Timestamp>@CommitterDate@ (@TimeStamp@)</Timestamp>
+  <Comment>@AbbreviatedHashSmall@ - @Subject@</Comment>
+</VersionInfo>
+]==] XML_CONTEXT @ONLY)
 
-  set(GEN_CONTEXT 
-[==[
-    product version: PipelinVersioneBranchId
-    build pipeline: PipelineBranchId.PipelineId
-    git commit hash: AbbreviatedHash
-    git subject: Subject
-    git commit author: AuthorName
-    git commit timestamp: CommitterDate
-    project path: [RefName]ProjectId
-    build date: BuildDate]==]
-  )
-
-  string(REPLACE "Subject" ${Subject} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "AuthorName" ${AuthorName} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "AbbreviatedHash" ${AbbreviatedHash} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "CommitterDate" ${CommitterDate} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "ProjectId" ${ProjectId} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "RefName" ${RefName} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "PipelineBranchId" ${PipelineBranchId} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "PipelineId" ${PipelineId} XML_CONTEXT ${XML_CONTEXT})
-  string(REPLACE "PipelinVersioneBranchId" ${Version} XML_CONTEXT ${XML_CONTEXT})
-
-  string(REPLACE "Subject" ${Subject} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "AuthorName" ${AuthorName} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "AbbreviatedHash" ${AbbreviatedHash} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "CommitterDate" ${CommitterDate} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "ProjectId" ${ProjectId} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "RefName" ${RefName} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "PipelineBranchId" ${PipelineBranchId} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "PipelineId" ${PipelineId} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "PipelinVersioneBranchId" ${Version} GEN_CONTEXT ${GEN_CONTEXT})
-  string(REPLACE "BuildDate" ${BuildDate} GEN_CONTEXT ${GEN_CONTEXT})
+  string(CONFIGURE [==[
+    product version: @Version@
+    build pipeline: @PipelineBranchId@.@PipelineId@
+    git commit hash: @AbbreviatedHashBig@
+    git subject: @Subject@
+    git commit author: @AuthorName@
+    git commit timestamp: @CommitterDate@
+    project path: [@RefName@]@ProjectId@
+    build date: @BuildDate@]==]
+GEN_CONTEXT @ONLY)
 
   file(WRITE ${OutDir}/version_gen.xml ${XML_CONTEXT})
   file(WRITE ${OutDir}/gitlab_gen.txt ${GEN_CONTEXT})
@@ -143,6 +113,11 @@ function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
 endfunction()
 
 function(EmbedVersionInformation Target RepositoryDir)
+  ReadVersionFromFile("${RepositoryDir}/VERSION" Version)
+  AcquireGitlabPipelineBranchId(PipelineBranchId)
+
+  set_property(TARGET ${Target} PROPERTY VERSION "${Version}.${PipelineBranchId}")
+  set_property(TARGET ${Target} PROPERTY SOVERSION "1")
 
   set(OutDir ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
@@ -152,16 +127,32 @@ function(EmbedVersionInformation Target RepositoryDir)
 
   GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${OutDir}/gitlab_gen.txt)
 
-#ifdef GNUC
-#static const volatile char BuildVersion[]  attribute((section("VERSION_TEXT"))) = MACRO_ARRAY;
-#endif
-  set(Additional "#ifdef GNUC^[NewLine]static const volatile char BuildVersion[] attribute((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = { MACRO_ARRAY }^[Semicolon]^[NewLine]#endif^[NewLine]")
-
+  string(CONCAT Additional
+    "const char* ${Target}_gitlab_GetVersion(){^[NewLine]"
+    "  return ^[DoubleQuote]${Version}^[DoubleQuote]^[Semicolon]^[NewLine]"
+    "}^[NewLine]"
+  )
+if(UNIX AND NOT APPLE AND NOT WIN32)
+  string(CONCAT Additional
+    ${Additional}
+    "#include <stdlib.h>^[NewLine]"
+    "#include <stdio.h>^[NewLine]"
+    "extern const unsigned char BuildVersion[] __attribute__((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = {^[NewLine]"
+    "^[HEXFILE] }^[Semicolon]^[NewLine]"
+    "extern const char interp_section[] __attribute__(( section( ^[DoubleQuote].interp^[DoubleQuote] ) ))^[NewLine]"
+    "  = ^[DoubleQuote]/lib64/ld-linux-x86-64.so.2^[DoubleQuote]^[Semicolon]^[NewLine]"
+    "__attribute__ ((visibility(^[DoubleQuote]default^[DoubleQuote])))^[NewLine]"
+    "void print_version() {^[NewLine]"
+    "  exit(0)^[Semicolon]^[NewLine]"
+    "}^[NewLine]"
+  )
+endif()
   GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
-  
+
   set(CMakeCutomFile "${OutDir}/EmbedVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})
   file(APPEND ${CMakeCutomFile} "include(EmbedVersionInformation)\n")
+
   file(APPEND ${CMakeCutomFile} "EmbedVersionInformationCustomCommand(\"${RepositoryDir}\" \"${OutDir}\")\n")
 
   add_custom_command(TARGET ${Target} PRE_BUILD

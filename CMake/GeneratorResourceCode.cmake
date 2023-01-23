@@ -46,8 +46,8 @@ function(GenerateResourceCustomCommand Target OutDir Additional FileToResource)
   get_filename_component(FileName ${FileToResource} NAME)
   string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
-  set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
-  set(FileNameResourceNameCTMP "${FileNameResourceNameC}{SuffixTMP}")
+  set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.c")
+  set(FileNameResourceNameCTMP "${FileNameResourceNameC}${SuffixTMP}")
   file(REMOVE ${FileNameResourceNameCTMP})
 
   file(READ ${FileToResource} FileHEX HEX)
@@ -60,6 +60,8 @@ function(GenerateResourceCustomCommand Target OutDir Additional FileToResource)
   string(REPLACE "    " "  " FileHEX ${FileHEX})
   string(REPLACE "Y" "0x00" FileHEX ${FileHEX})
 
+  set(OnlyHEX ${FileHEX})
+
   string(CONFIGURE [==[
 #define MACRO_ARRAY \
 @FileHEX@
@@ -68,7 +70,7 @@ static const unsigned char @FunctionName@_Data[] = { MACRO_ARRAY }\;
 
 const char* @FunctionName@()
 {
-  return reinterpret_cast<const char*>(&@FunctionName@_Data[0])\;
+  return (const char*)(&@FunctionName@_Data[0])\;
 }
 
 unsigned long long @FunctionName@_size()
@@ -88,6 +90,7 @@ unsigned long long @FunctionName@_size()
     string(REPLACE "^[Tab]" "\t" Additional ${Additional})
     string(REPLACE "^[Dollar]" "$" Additional ${Additional})
     string(REPLACE "^[Section]" "$" Additional ${Additional})
+    string(REPLACE "^[HEXFILE]" ${OnlyHEX} Additional ${Additional})
     string(REPLACE "^[Semicolon]" "\;" Additional ${Additional})
     file(APPEND ${FileNameResourceNameCTMP} ${Additional})
   endif()
@@ -128,11 +131,7 @@ function(GenerateResourceAdditional Target RepositoryDir OutDir Additional)
     get_filename_component(FileName ${FileToResource} NAME)
 
     set(CMakeCutomFile ${OutDir}/GenerateResourceCustomCommandFor_${FileName}.cmake)
-    set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
-
-    if(NOT EXISTS ${FileNameResourceNameC})
-      file(WRITE ${FileNameResourceNameC} "\n")
-    endif()
+    set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.c")
 
     string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
@@ -141,6 +140,8 @@ const char* @FunctionName@()
 unsigned long long @FunctionName@_size()
 ]] ContentH)
     file(APPEND ${FileNameResourceNameHTMP} ${ContentH})
+
+    GenerateResourceCustomCommand(${Target} ${OutDir} ${Additional} ${FileToResource})
 
     file(REMOVE ${CMakeCutomFile})
     file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
@@ -172,9 +173,16 @@ function(GenerateResourceFinalize)
       if(EXISTS "${HeaderFile}${SuffixTMP}")
         file(STRINGS "${HeaderFile}${SuffixTMP}" ContentH)
         list(REMOVE_DUPLICATES ContentH)
+
+        file(WRITE "${HeaderFile}${SuffixTMP}${SuffixTMP}" "#ifdef __cplusplus\n")
+        file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "extern \"C\"\n{\n")
+        file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "#endif\n")
         foreach(Line ${ContentH})
           file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "${Line};\n")
         endforeach()
+        file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "#ifdef __cplusplus\n")
+        file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "}\n")
+        file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "#endif\n")
         FileCopyIsChanged("${HeaderFile}${SuffixTMP}${SuffixTMP}" ${HeaderFile})
       endif()
       file(REMOVE "${HeaderFile}${SuffixTMP}")
