@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19.8)
+cmake_minimum_required(VERSION 3.11.0)
 
 function(ReadVersionFromFile file version)
   if(EXISTS ${file})
