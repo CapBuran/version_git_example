@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19.8)
+cmake_minimum_required(VERSION 3.17.0)
 
 function(ReadVersionFromFile file version)
   if(EXISTS ${file})
@@ -125,7 +125,7 @@ function(EmbedVersionInformation Target RepositoryDir)
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${OutDir}/gitlab_gen.txt)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} ${OutDir}/gitlab_gen.txt)
 
   string(CONCAT Additional
     "const char* ${Target}_gitlab_GetVersion(){^[NewLine]"
@@ -147,7 +147,7 @@ if(UNIX AND NOT APPLE AND NOT WIN32)
     "}^[NewLine]"
   )
 endif()
-  GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
+  GenerateResourceAdditional(${Target} ${OutDir} ${Additional} ${OutDir}/version_gen.xml)
 
   set(CMakeCutomFile "${OutDir}/EmbedVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})

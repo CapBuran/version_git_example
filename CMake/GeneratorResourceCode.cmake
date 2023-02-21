@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19.8)
+cmake_minimum_required(VERSION 3.17.0)
 
 set(EmptyAdditionalValue "EmPtY")
 set(SuffixTMP "TMP")
@@ -100,7 +100,7 @@ unsigned long long @FunctionName@_size()
   file(REMOVE ${FileNameResourceNameCTMP})
 endfunction()
 
-function(GenerateResourceAdditional Target RepositoryDir OutDir Additional)
+function(GenerateResourceAdditional Target OutDir Additional)
   list(REMOVE_DUPLICATES ARGN)
 
   list(LENGTH ARGN LengyhARGN)
@@ -162,8 +162,8 @@ unsigned long long @FunctionName@_size()
   source_group("Generated" FILES ${FileNameResourceNameH})
 endfunction()
 
-function(GenerateResource Target RepositoryDir OutDir)
-  GenerateResourceAdditional(${Target} ${RepositoryDir} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
+function(GenerateResource Target OutDir)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
 endfunction()
 
 function(GenerateResourceFinalize)
