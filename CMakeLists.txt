@@ -3,7 +3,7 @@ message(STATUS "CMAKE_GENERATOR='${CMAKE_GENERATOR}'")
 
 cmake_minimum_required(VERSION 3.11.0)
 
-project (version_git_example1 CXX)
+project (version_git_example1 C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
