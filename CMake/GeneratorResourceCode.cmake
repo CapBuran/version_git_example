@@ -22,7 +22,7 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
     file(READ ${FullPathSrc} TMP_SRC)
     file(READ ${FullPathDst} TMP_DST)
     if(NOT TMP_SRC)
-      message(ERROR "File not found: ${FullPathSrc}")
+      message(FATAL_ERROR "File not found: ${FullPathSrc}")
     endif()
     if(NOT TMP_DST)
       set(IsChanged 1)
@@ -39,16 +39,26 @@ function(FileCopyIsChanged FullPathSrc FullPathDst)
   endif()
 endfunction()
 
-function(GenerateResourceCustomCommand Target OutDir Additional FileToResource)
+function(GenerateResourceCustomCommand Target OutDir Additional Language FileToResource)
 
   get_filename_component(FolderName ${OutDir} NAME)
 
   get_filename_component(FileName ${FileToResource} NAME)
   string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
-  set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.c")
-  set(FileNameResourceNameCTMP "${FileNameResourceNameC}${SuffixTMP}")
-  file(REMOVE ${FileNameResourceNameCTMP})
+  set(FileNameResourceName "")
+
+  if("${Language}" STREQUAL "C")
+    set(FileNameResourceName "${OutDir}/${Target}_${FolderName}_${FileName}.c")
+  elseif("${Language}" STREQUAL "CPP")
+    set(FileNameResourceName "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
+  else()
+    message(ERROR "programming language not supported: ${Language}")
+  endif()
+ 
+  set(FileNameResourceNameTMP "${FileNameResourceName}${SuffixTMP}")
+
+  file(REMOVE ${FileNameResourceNameTMP})
 
   file(READ ${FileToResource} FileHEX HEX)
   set(FileHEX ${FileHEX}Y)
@@ -78,9 +88,9 @@ unsigned long long @FunctionName@_size()
   return sizeof(@FunctionName@_Data) - 1\;
 }
 
-]==] ContentC)
+]==] Content)
 
-  file(APPEND ${FileNameResourceNameCTMP} ${ContentC})
+  file(APPEND ${FileNameResourceNameTMP} ${Content})
 
   if(NOT ${Additional} STREQUAL ${EmptyAdditionalValue})
     string(REPLACE "^[SingleQuote]" "'" Additional ${Additional})
@@ -92,15 +102,15 @@ unsigned long long @FunctionName@_size()
     string(REPLACE "^[Section]" "$" Additional ${Additional})
     string(REPLACE "^[HEXFILE]" ${OnlyHEX} Additional ${Additional})
     string(REPLACE "^[Semicolon]" "\;" Additional ${Additional})
-    file(APPEND ${FileNameResourceNameCTMP} ${Additional})
+    file(APPEND ${FileNameResourceNameTMP} ${Additional})
   endif()
 
-  FileCopyIsChanged(${FileNameResourceNameCTMP} ${FileNameResourceNameC})
+  FileCopyIsChanged(${FileNameResourceNameTMP} ${FileNameResourceName})
 
-  file(REMOVE ${FileNameResourceNameCTMP})
+  file(REMOVE ${FileNameResourceNameTMP})
 endfunction()
 
-function(GenerateResourceAdditional Target OutDir Additional)
+function(GenerateResourceAdditional Target OutDir Additional Language)
   list(REMOVE_DUPLICATES ARGN)
 
   list(LENGTH ARGN LengyhARGN)
@@ -112,26 +122,45 @@ function(GenerateResourceAdditional Target OutDir Additional)
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}.h")
+  set(FileNameResourceNameH "${OutDir}/${Target}_${FolderName}_${Language}.h")
   set(FileNameResourceNameHTMP "${FileNameResourceNameH}${SuffixTMP}")
 
-  set(ResourceHeadersListCopyCACHE "")
+  set(ResourceHeadersListCopyCache "")
 
-  if(ResourceHeadersListCACHE)
-    foreach(HeaderFile ${ResourceHeadersListCACHE})
-      list(APPEND ResourceHeadersListCopyCACHE ${HeaderFile})
-    endforeach()
+  list(APPEND ResourceHeadersListCopyCache ${FileNameResourceNameH})
+
+  if("${Language}" STREQUAL "C")
+    if(ResourceHeadersListCacheC)
+      foreach(HeaderFile ${ResourceHeadersListCacheC})
+        list(APPEND ResourceHeadersListCopyCache ${HeaderFile})
+      endforeach()
+    endif()
+    set(ResourceHeadersListCacheC ${ResourceHeadersListCopyCache} CACHE STRING "11" FORCE)
+  elseif("${Language}" STREQUAL "CPP")
+    if(ResourceHeadersListCacheCPP)
+      foreach(HeaderFile ${ResourceHeadersListCacheCPP})
+        list(APPEND ResourceHeadersListCopyCache ${HeaderFile})
+      endforeach()
+    endif()
+    set(ResourceHeadersListCacheCPP ${ResourceHeadersListCopyCache} CACHE STRING "11" FORCE)
+  else()
+    message(FATAL_ERROR "programming language not supported: ${Language}")
   endif()
-
-  list(APPEND ResourceHeadersListCopyCACHE ${FileNameResourceNameH})
-
-  set(ResourceHeadersListCACHE ${ResourceHeadersListCopyCACHE} CACHE STRING "11" FORCE)
 
   foreach(FileToResource ${ARGN})
     get_filename_component(FileName ${FileToResource} NAME)
 
     set(CMakeCutomFile ${OutDir}/GenerateResourceCustomCommandFor_${FileName}.cmake)
-    set(FileNameResourceNameC "${OutDir}/${Target}_${FolderName}_${FileName}.c")
+
+    set(FileNameResourceName "")
+
+    if("${Language}" STREQUAL "C")
+       set(FileNameResourceName "${OutDir}/${Target}_${FolderName}_${FileName}.c")
+    elseif("${Language}" STREQUAL "CPP")
+      set(FileNameResourceName "${OutDir}/${Target}_${FolderName}_${FileName}.cpp")
+    else()
+      message(FATAL_ERROR "programming language not supported: ${Language}")
+    endif()
 
     string(MAKE_C_IDENTIFIER "${Target}_${FileName}" FunctionName)
 
@@ -141,39 +170,38 @@ unsigned long long @FunctionName@_size()
 ]] ContentH)
     file(APPEND ${FileNameResourceNameHTMP} ${ContentH})
 
-    GenerateResourceCustomCommand(${Target} ${OutDir} ${Additional} ${FileToResource})
+    GenerateResourceCustomCommand(${Target} ${OutDir} ${Additional} ${Language} ${FileToResource})
 
     file(REMOVE ${CMakeCutomFile})
     file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
-    file(APPEND ${CMakeCutomFile} "GenerateResourceCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${FileToResource}\")\n")
+    file(APPEND ${CMakeCutomFile} "GenerateResourceCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${Language}\" \"${FileToResource}\")\n")
 
     target_sources(${Target} PRIVATE ${FileToResource})
-    target_sources(${Target} PRIVATE ${FileNameResourceNameC})
-    source_group("Generated" FILES ${FileNameResourceNameC})
+    target_sources(${Target} PRIVATE ${FileNameResourceName})
+    source_group("Generated" FILES ${FileNameResourceName})
 
     add_custom_command(
-      OUTPUT ${FileNameResourceNameC}
+      OUTPUT ${FileNameResourceName}
       COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
       DEPENDS ${FileToResource}
     )
   endforeach()
 
-  target_sources(${Target} PRIVATE ${FileNameResourceNameH})
-  source_group("Generated" FILES ${FileNameResourceNameH})
+  target_sources(${Target} PRIVATE ${FileNameResourceNameH} ${FileNameResourceName})
+  source_group("Generated" FILES ${FileNameResourceNameH} ${FileNameResourceName})
 endfunction()
 
-function(GenerateResource Target OutDir)
-  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} ${ARGN})
+function(GenerateResource Target OutDir Language)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} ${Language} ${ARGN})
 endfunction()
 
 function(GenerateResourceFinalize)
-  if(ResourceHeadersListCACHE)
-    list(REMOVE_DUPLICATES ResourceHeadersListCACHE)
-    foreach(HeaderFile ${ResourceHeadersListCACHE})
+  if(ResourceHeadersListCacheC)
+    list(REMOVE_DUPLICATES ResourceHeadersListCacheC)
+    foreach(HeaderFile ${ResourceHeadersListCacheC})
       if(EXISTS "${HeaderFile}${SuffixTMP}")
         file(STRINGS "${HeaderFile}${SuffixTMP}" ContentH)
         list(REMOVE_DUPLICATES ContentH)
-
         file(WRITE "${HeaderFile}${SuffixTMP}${SuffixTMP}" "#ifdef __cplusplus\n")
         file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "extern \"C\"\n{\n")
         file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "#endif\n")
@@ -188,6 +216,23 @@ function(GenerateResourceFinalize)
       file(REMOVE "${HeaderFile}${SuffixTMP}")
       file(REMOVE "${HeaderFile}${SuffixTMP}${SuffixTMP}")
     endforeach()
-    unset(ResourceHeadersListCACHE CACHE)
+    unset(ResourceHeadersListCacheC CACHE)
+  endif()
+  if(ResourceHeadersListCacheCPP)
+    list(REMOVE_DUPLICATES ResourceHeadersListCacheCPP)
+    foreach(HeaderFile ${ResourceHeadersListCacheCPP})
+      if(EXISTS "${HeaderFile}${SuffixTMP}")
+        file(STRINGS "${HeaderFile}${SuffixTMP}" ContentH)
+        list(REMOVE_DUPLICATES ContentH)
+        file(WRITE "${HeaderFile}${SuffixTMP}${SuffixTMP}" "\n")
+        foreach(Line ${ContentH})
+          file(APPEND "${HeaderFile}${SuffixTMP}${SuffixTMP}" "${Line};\n")
+        endforeach()
+        FileCopyIsChanged("${HeaderFile}${SuffixTMP}${SuffixTMP}" ${HeaderFile})
+      endif()
+      file(REMOVE "${HeaderFile}${SuffixTMP}")
+      file(REMOVE "${HeaderFile}${SuffixTMP}${SuffixTMP}")
+    endforeach()
+    unset(ResourceHeadersListCacheCPP CACHE)
   endif()
 endfunction()

@@ -1,4 +1,4 @@
-#include <version_git_example1_versiongen.h>
+#include <version_git_example1_versiongen_CPP.h>
 
 #include <iostream>
 
