@@ -195,6 +195,14 @@ function(GenerateResource Target OutDir Language)
   GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} ${Language} ${ARGN})
 endfunction()
 
+function(GenerateResourceC Target OutDir)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "C" ${ARGN})
+endfunction()
+
+function(GenerateResourceCPP Target OutDir)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${ARGN})
+endfunction()
+
 function(GenerateResourceFinalize)
   if(ResourceHeadersListCacheC)
     list(REMOVE_DUPLICATES ResourceHeadersListCacheC)
