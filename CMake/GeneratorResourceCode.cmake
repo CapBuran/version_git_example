@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11.0)
+cmake_minimum_required(VERSION 3.17.0)
 
 set(EmptyAdditionalValue "EmPtY")
 set(SuffixTMP "TMP")
@@ -173,6 +173,7 @@ unsigned long long @FunctionName@_size()
     GenerateResourceCustomCommand(${Target} ${OutDir} ${Additional} ${Language} ${FileToResource})
 
     file(REMOVE ${CMakeCutomFile})
+    file(APPEND ${CMakeCutomFile} "set(CMAKE_MODULE_PATH" ${CMAKE_CURRENT_FUNCTION_LIST_DIR} ")\n" )
     file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
     file(APPEND ${CMakeCutomFile} "GenerateResourceCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${Language}\" \"${FileToResource}\")\n")
 
@@ -182,7 +183,7 @@ unsigned long long @FunctionName@_size()
 
     add_custom_command(
       OUTPUT ${FileNameResourceName}
-      COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
+      COMMAND ${CMAKE_COMMAND} -DCMAKE_MODULE_PATH=${CMAKE_CURRENT_FUNCTION_LIST_DIR} -P "${CMakeCutomFile}"
       DEPENDS ${FileToResource}
     )
   endforeach()

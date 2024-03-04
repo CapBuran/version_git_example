@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11.0)
+cmake_minimum_required(VERSION 3.17.0)
 
 function(ReadVersionFromFile file version)
   if(EXISTS ${file})
@@ -54,7 +54,7 @@ function(AcquireRefName id)
   endif()
 endfunction()
 
-function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
+function(EmbedVersionInformationCustomCommandBuildVariant RepositoryDir OutDir MessageBuildVariant)
   if(NOT GIT_FOUND)
     find_package(Git)
   else()
@@ -87,32 +87,33 @@ function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
 
   set(BuildDate "${Date} ${Time} ${TimeZone}")
 
-  string(CONFIGURE [==[
-<VersionInfo>
-  <FileVersion>@Version@</FileVersion>
-  <ProductVersion>@Version@</ProductVersion>
-  <Timestamp>@CommitterDate@ (@TimeStamp@)</Timestamp>
-  <Comment>@AbbreviatedHashSmall@ - @Subject@</Comment>
-</VersionInfo>
-]==] XML_CONTEXT @ONLY)
+  string(CONFIGURE [==[<VersionInfo><FileVersion>@Version@-@PipelineBranchId@.@PipelineId@</FileVersion><ProductVersion>@Version@-@PipelineBranchId@.@PipelineId@</ProductVersion><Timestamp>@CommitterDate@ (@TimeStamp@)</Timestamp><Comment>@AbbreviatedHashSmall@ - @Subject@</Comment></VersionInfo>]==] XML_CONTEXT @ONLY)
 
   string(CONFIGURE [==[
-    product version: @Version@
-    build pipeline: @PipelineBranchId@.@PipelineId@
-    git commit hash: @AbbreviatedHashBig@
+    git commit hash: @AbbreviatedHashSmall@
     git subject: @Subject@
     git commit author: @AuthorName@
     git commit timestamp: @CommitterDate@
     project path: [@RefName@]@ProjectId@
+    build pipeline: @PipelineBranchId@.@PipelineId@
+    product version: @Version@
     build date: @BuildDate@]==]
-GEN_CONTEXT @ONLY)
+  GEN_CONTEXT @ONLY)
 
   file(WRITE ${OutDir}/version_gen.xml ${XML_CONTEXT})
   file(WRITE ${OutDir}/gitlab_gen.txt ${GEN_CONTEXT})
+  file(WRITE ${OutDir}/git_hash_gen.txt ${AbbreviatedHashSmall})
+  file(WRITE ${OutDir}/project_version.txt ${Version})
+  file(WRITE ${OutDir}/gitlab_pipeline.txt ${PipelineBranchId}.${PipelineId})
+  file(WRITE ${OutDir}/product_build_version.txt ${Version}-${PipelineBranchId}.${PipelineId} ${MessageBuildVariant})
 
 endfunction()
 
-function(EmbedVersionInformation Target RepositoryDir)
+function(EmbedVersionInformationCustomCommand RepositoryDir OutDir)
+  EmbedVersionInformationCustomCommandBuildVariant(${RepositoryDir} ${OutDir} " ")
+endfunction()
+
+function(EmbedVersionInformationBuildVariantSo Target RepositoryDir MessageBuildVariant IsGenMainVersion)
   ReadVersionFromFile("${RepositoryDir}/VERSION" Version)
   AcquireGitlabPipelineBranchId(PipelineBranchId)
 
@@ -121,20 +122,40 @@ function(EmbedVersionInformation Target RepositoryDir)
 
   set(OutDir ${CMAKE_CURRENT_BINARY_DIR}/versiongen)
 
-  EmbedVersionInformationCustomCommand(${RepositoryDir} ${OutDir})
+  EmbedVersionInformationCustomCommandBuildVariant(${RepositoryDir} ${OutDir} ${MessageBuildVariant})
 
   get_filename_component(FolderName ${OutDir} NAME)
 
   GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/gitlab_gen.txt)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/project_version.txt)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/git_hash_gen.txt)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/gitlab_pipeline.txt)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/product_build_version.txt)
 
   string(CONCAT Additional
-    "const char* ${Target}_gitlab_GetVersion(){^[NewLine]"
+    "#define VERSION_INFO_EXPORTS 1^[NewLine]"
+    "#ifdef _WIN32^[NewLine]"
+    "  #ifdef VERSION_INFO_EXPORTS^[NewLine]"
+    "    #define VERSION_INFO_DLLDIR __declspec(dllexport)^[NewLine]"
+    "  #else^[NewLine]"
+    "    #define VERSION_INFO_DLLDIR __declspec(dllimport)^[NewLine]"
+    "  #endif^[NewLine]"
+    "#else^[NewLine]"
+    "  #ifdef VERSION_INFO_EXPORTS^[NewLine]"
+    "    #define VERSION_INFO_DLLDIR __attribute__ ((visibility(^[DoubleQuote]default^[DoubleQuote])))^[NewLine]"
+    "  #else^[NewLine]"
+    "    #define VERSION_INFO_DLLDIR __attribute__ ((visibility(^[DoubleQuote]default^[DoubleQuote])))^[NewLine]"
+    "  #endif^[NewLine]"
+    "#endif^[NewLine]"
+    "^[NewLine]"
+    "VERSION_INFO_DLLDIR const char* ${Target}_gitlab_GetVersion(){^[NewLine]"
     "  return ^[DoubleQuote]${Version}^[DoubleQuote]^[Semicolon]^[NewLine]"
     "}^[NewLine]"
   )
-if(UNIX AND NOT APPLE AND NOT WIN32)
+if(IsGenMainVersion AND UNIX AND NOT APPLE AND NOT WIN32)
   string(CONCAT Additional
     ${Additional}
+    "^[NewLine]"
     "#include <stdlib.h>^[NewLine]"
     "#include <stdio.h>^[NewLine]"
     "extern const unsigned char BuildVersion[] __attribute__((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = {^[NewLine]"
@@ -145,19 +166,29 @@ if(UNIX AND NOT APPLE AND NOT WIN32)
     "void print_version() {^[NewLine]"
     "  exit(0)^[Semicolon]^[NewLine]"
     "}^[NewLine]"
+    "^[NewLine]"
   )
 endif()
   GenerateResourceAdditional(${Target} ${OutDir} ${Additional} "CPP" ${OutDir}/version_gen.xml)
 
   set(CMakeCutomFile "${OutDir}/EmbedVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})
+  file(APPEND ${CMakeCutomFile} "set(CMAKE_MODULE_PATH" ${CMAKE_CURRENT_FUNCTION_LIST_DIR} ")\n")
+  file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
   file(APPEND ${CMakeCutomFile} "include(EmbedVersionInformation)\n")
-
   file(APPEND ${CMakeCutomFile} "EmbedVersionInformationCustomCommand(\"${RepositoryDir}\" \"${OutDir}\")\n")
 
   add_custom_command(TARGET ${Target} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -D"CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}" -P "${CMakeCutomFile}"
+    COMMAND ${CMAKE_COMMAND} -DCMAKE_MODULE_PATH=${CMAKE_CURRENT_FUNCTION_LIST_DIR} -P "${CMakeCutomFile}"
     COMMENT "Generate version files for ${Target}"
   )
 
+endfunction()
+
+function(EmbedVersionInformationBuildVariant Target RepositoryDir MessageBuildVariant)
+  EmbedVersionInformationBuildVariantSo(${Target} ${RepositoryDir} ${MessageBuildVariant} False)
+endfunction()
+
+function(EmbedVersionInformation Target RepositoryDir)
+  EmbedVersionInformationBuildVariantSo(${Target} ${RepositoryDir} " " False)
 endfunction()
