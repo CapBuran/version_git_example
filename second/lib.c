@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 #include "lib.h"
 #include <version_git_example2_gen_C.h>
 

@@ -3,17 +3,12 @@
 
 #include <iostream>
 
-extern "C"
-{
-  int lib_c();
-}
-
 int lib()
 {
-  std::cout << "New Line" << std::endl;
+  std::cout << "New Line1" << std::endl;
   std::cout << version_git_example2_gitlab_gen_txt() << std::endl;
-  std::cout << "New Line" << std::endl;
-  std::cout << lib_c() << std::endl;
-  std::cout << "New Line" << std::endl;
+  std::cout << "New Line2" << std::endl;
+  lib_c();
+  std::cout << "New Line3" << std::endl;
   return 0;
 }
