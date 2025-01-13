@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "lib.h"
-#include <version_git_example2_gen_C.h>
+#include <../gen/no_load_dll_gen_C.h>
 
 int lib_c()
 {

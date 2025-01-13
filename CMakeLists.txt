@@ -25,6 +25,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
 include(EmbedVersionInformation)
 include(GeneratorResourceCode)
+include(EnsureOutputPath)
 
 file(GLOB ${PROJECT_NAME}_INC ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB ${PROJECT_NAME}_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
