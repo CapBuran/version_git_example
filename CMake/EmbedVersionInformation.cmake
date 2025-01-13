@@ -91,9 +91,9 @@ function(EmbedVersionInformationCustomCommandBuildVariant RepositoryDir OutDir M
 
   string(CONFIGURE [==[
     git commit hash: @AbbreviatedHashSmall@
-    git subject: @Subject@
-    git commit author: @AuthorName@
     git commit timestamp: @CommitterDate@
+    git commit author: @AuthorName@
+    git subject: @Subject@
     project path: [@RefName@]@ProjectId@
     build pipeline: @PipelineBranchId@.@PipelineId@
     product version: @Version@
@@ -126,7 +126,7 @@ function(EmbedVersionInformationBuildVariantSo Target RepositoryDir MessageBuild
 
   get_filename_component(FolderName ${OutDir} NAME)
 
-  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/gitlab_gen.txt)
+  GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/version_gen.xml)
   GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/project_version.txt)
   GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/git_hash_gen.txt)
   GenerateResourceAdditional(${Target} ${OutDir} ${EmptyAdditionalValue} "CPP" ${OutDir}/gitlab_pipeline.txt)
@@ -152,24 +152,46 @@ function(EmbedVersionInformationBuildVariantSo Target RepositoryDir MessageBuild
     "  return ^[DoubleQuote]${Version}^[DoubleQuote]^[Semicolon]^[NewLine]"
     "}^[NewLine]"
   )
-if(IsGenMainVersion AND UNIX AND NOT APPLE AND NOT WIN32)
-  string(CONCAT Additional
-    ${Additional}
-    "^[NewLine]"
-    "#include <stdlib.h>^[NewLine]"
-    "#include <stdio.h>^[NewLine]"
-    "extern const unsigned char BuildVersion[] __attribute__((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = {^[NewLine]"
-    "^[HEXFILE] }^[Semicolon]^[NewLine]"
-    "extern const char interp_section[] __attribute__(( section( ^[DoubleQuote].interp^[DoubleQuote] ) ))^[NewLine]"
-    "  = ^[DoubleQuote]/lib64/ld-linux-x86-64.so.2^[DoubleQuote]^[Semicolon]^[NewLine]"
-    "__attribute__ ((visibility(^[DoubleQuote]default^[DoubleQuote])))^[NewLine]"
-    "void print_version() {^[NewLine]"
-    "  exit(0)^[Semicolon]^[NewLine]"
-    "}^[NewLine]"
-    "^[NewLine]"
-  )
-endif()
-  GenerateResourceAdditional(${Target} ${OutDir} ${Additional} "CPP" ${OutDir}/version_gen.xml)
+
+  if(IsGenMainVersion AND UNIX AND NOT APPLE AND NOT WIN32)
+    string(CONCAT Additional
+      "#include <stdlib.h>^[NewLine]"
+      "#include <stdio.h>^[NewLine]"
+      "^[NewLine]"
+      ${Additional}
+      "^[NewLine]"
+      "extern const unsigned char BuildVersion[] __attribute__((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = {"
+      "MACRO_ARRAY}^[Semicolon]^[NewLine]"
+      "^[NewLine]"
+      "extern const char interp_section[] __attribute__(( section( ^[DoubleQuote].interp^[DoubleQuote] ) ))"
+      " = ^[DoubleQuote]/lib64/ld-linux-x86-64.so.2^[DoubleQuote]^[Semicolon]^[NewLine]"
+      "extern ^[DoubleQuote]C^[DoubleQuote] void PrintVersion(){^[NewLine]"
+      "  printf(^[DoubleQuote]${Target}.so:^[BackSlash]n%s^[BackSlash]n^[DoubleQuote], ${Target}_gitlab_gen_txt())^[Semicolon]^[NewLine]"
+      "}^[NewLine]"
+    )
+
+    set(ToWriteMainCFile
+      "#include <stdlib.h>\n"
+      "#include <stdio.h>\n"
+      "\n"
+      "extern void PrintVersion()\;\n"
+      "__attribute__ ((visibility(\"default\")))\n"
+      "int main(int argc, char **argv){\n"
+      "  PrintVersion()\;\n"
+      "  exit(0)\;\n"
+      "}\n"
+      "__attribute__ ((visibility(\"default\")))\n"
+      "int multi_main(void){\n"
+      "  PrintVersion()\;\n"
+      "  exit(0)\;\n"
+      "}\n"
+    )
+    file(WRITE ${OutDir}/${Target}_main.c ${ToWriteMainCFile})
+    target_sources(${Target} PRIVATE ${OutDir}/${Target}_main.c)
+    target_link_libraries(${Target} PRIVATE "-Wl,-e,multi_main")
+  endif()
+
+  GenerateResourceAdditional(${Target} ${OutDir} ${Additional} "CPP" ${OutDir}/gitlab_gen.txt)
 
   set(CMakeCutomFile "${OutDir}/EmbedVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})

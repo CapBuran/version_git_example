@@ -41,6 +41,8 @@ list(APPEND RES ${CMAKE_CURRENT_SOURCE_DIR}/resources/TEXT_RESOURCE4.TXT)
 
 GenerateResource(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR}/gen "C" ${RES})
 
+add_subdirectory(dll)
+
 add_subdirectory(second)
 
 GenerateResourceFinalize()
