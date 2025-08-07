@@ -100,6 +100,18 @@ function(EmbedVersionInformationCustomCommandBuildVariant RepositoryDir OutDir M
     build date: @BuildDate@]==]
   GEN_CONTEXT @ONLY)
 
+  if(PRODUCT_INTERNATIONAL)
+    string(CONFIGURE [==[
+      git commit hash: @AbbreviatedHashSmall@
+      git commit timestamp: @CommitterDate@
+      build pipeline: @PipelineBranchId@.@PipelineId@
+      product version: @Version@
+      build date: @BuildDate@]==]
+    GEN_CONTEXT @ONLY)
+
+    string(CONFIGURE [==[<VersionInfo><FileVersion>@Version@-@PipelineBranchId@.@PipelineId@</FileVersion><ProductVersion>@Version@-@PipelineBranchId@.@PipelineId@</ProductVersion><Timestamp>@CommitterDate@ (@TimeStamp@)</Timestamp></VersionInfo>]==] XML_CONTEXT @ONLY)
+  endif()
+
   file(WRITE ${OutDir}/version_gen.xml ${XML_CONTEXT})
   file(WRITE ${OutDir}/gitlab_gen.txt ${GEN_CONTEXT})
   file(WRITE ${OutDir}/git_hash_gen.txt ${AbbreviatedHashSmall})
@@ -147,55 +159,40 @@ function(EmbedVersionInformationBuildVariantSo Target RepositoryDir MessageBuild
     "    #define VERSION_INFO_DLLDIR __attribute__ ((visibility(^[DoubleQuote]default^[DoubleQuote])))^[NewLine]"
     "  #endif^[NewLine]"
     "#endif^[NewLine]"
+  )
+if(IsGenMainVersion AND UNIX AND NOT APPLE AND NOT WIN32)
+  string(CONCAT Additional
+    ${Additional}
     "^[NewLine]"
-    "VERSION_INFO_DLLDIR const char* ${Target}_gitlab_GetVersion(){^[NewLine]"
-    "  return ^[DoubleQuote]${Version}^[DoubleQuote]^[Semicolon]^[NewLine]"
+    "#include <stdlib.h>^[NewLine]"
+    "#include <stdio.h>^[NewLine]"
+    "extern const char interp_section[] __attribute__(( section( ^[DoubleQuote].interp^[DoubleQuote] ) )) = ^[DoubleQuote]/lib64/ld-linux-x86-64.so.2^[DoubleQuote]^[Semicolon]^[NewLine]"
+    "__attribute__ ((visibility(^[DoubleQuote]default^[DoubleQuote])))^[NewLine]"
+    "void print_version() {^[NewLine]"
+    "  printf(^[DoubleQuote]${Target}.so:^[BackSlash]n%s^[BackSlash]n^[DoubleQuote], ${Target}_gitlab_gen_txt() )^[Semicolon]^[NewLine]"
+    "  exit(0)^[Semicolon]^[NewLine]"
+    "}^[NewLine]"
+    "^[NewLine]"
+    "const char dl_loader[] __attribute__((section(^[DoubleQuote].interp^[DoubleQuote]))) = ^[DoubleQuote]/lib64/ld-linux-x86-64.so.2^[DoubleQuote]^[Semicolon]^[NewLine]"
+    "^[NewLine]"
+    "extern ^[DoubleQuote]C^[DoubleQuote]^[NewLine]"
+    "void multi_main(){^[NewLine]"
+    "  print_version()^[Semicolon]^[NewLine]"
+    "}^[NewLine]"
+    "^[NewLine]"
+    "int main(int argc, char **argv){^[NewLine]"
+    "  print_version()^[Semicolon]^[NewLine]"
+    "  return 0^[Semicolon]^[NewLine]"
     "}^[NewLine]"
   )
 
-  if(IsGenMainVersion AND UNIX AND NOT APPLE AND NOT WIN32)
-    string(CONCAT Additional
-      "#include <stdlib.h>^[NewLine]"
-      "#include <stdio.h>^[NewLine]"
-      "^[NewLine]"
-      ${Additional}
-      "^[NewLine]"
-      "extern const unsigned char BuildVersion[] __attribute__((section(^[DoubleQuote]VERSION_TEXT^[DoubleQuote]))) = {"
-      "MACRO_ARRAY}^[Semicolon]^[NewLine]"
-      "^[NewLine]"
-      "extern const char interp_section[] __attribute__(( section( ^[DoubleQuote].interp^[DoubleQuote] ) ))"
-      " = ^[DoubleQuote]/lib64/ld-linux-x86-64.so.2^[DoubleQuote]^[Semicolon]^[NewLine]"
-      "extern ^[DoubleQuote]C^[DoubleQuote] void PrintVersion(){^[NewLine]"
-      "  printf(^[DoubleQuote]${Target}.so:^[BackSlash]n%s^[BackSlash]n^[DoubleQuote], ${Target}_gitlab_gen_txt())^[Semicolon]^[NewLine]"
-      "}^[NewLine]"
-    )
-
-    set(ToWriteMainCFile
-      "#include <stdlib.h>\n"
-      "#include <stdio.h>\n"
-      "\n"
-      "extern void PrintVersion()\;\n"
-      "__attribute__ ((visibility(\"default\")))\n"
-      "int main(int argc, char **argv){\n"
-      "  PrintVersion()\;\n"
-      "  exit(0)\;\n"
-      "}\n"
-      "__attribute__ ((visibility(\"default\")))\n"
-      "int multi_main(void){\n"
-      "  PrintVersion()\;\n"
-      "  exit(0)\;\n"
-      "}\n"
-    )
-    file(WRITE ${OutDir}/${Target}_main.c ${ToWriteMainCFile})
-    target_sources(${Target} PRIVATE ${OutDir}/${Target}_main.c)
-    target_link_libraries(${Target} PRIVATE "-Wl,-e,multi_main")
-  endif()
-
+  target_link_libraries(${PROJECT_NAME} PRIVATE "-Wl,-e,multi_main")
+endif()
   GenerateResourceAdditional(${Target} ${OutDir} ${Additional} "CPP" ${OutDir}/gitlab_gen.txt)
 
   set(CMakeCutomFile "${OutDir}/EmbedVersion_${Target}.cmake")
   file(REMOVE ${CMakeCutomFile})
-  file(APPEND ${CMakeCutomFile} "set(CMAKE_MODULE_PATH" ${CMAKE_CURRENT_FUNCTION_LIST_DIR} ")\n")
+  file(APPEND ${CMakeCutomFile} "set(CMAKE_MODULE_PATH\ " ${CMAKE_CURRENT_FUNCTION_LIST_DIR} ")\n")
   file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
   file(APPEND ${CMakeCutomFile} "include(EmbedVersionInformation)\n")
   file(APPEND ${CMakeCutomFile} "EmbedVersionInformationCustomCommand(\"${RepositoryDir}\" \"${OutDir}\")\n")

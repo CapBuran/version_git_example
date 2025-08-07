@@ -173,7 +173,7 @@ unsigned long long @FunctionName@_size()
     GenerateResourceCustomCommand(${Target} ${OutDir} ${Additional} ${Language} ${FileToResource})
 
     file(REMOVE ${CMakeCutomFile})
-    file(APPEND ${CMakeCutomFile} "set(CMAKE_MODULE_PATH" ${CMAKE_CURRENT_FUNCTION_LIST_DIR} ")\n" )
+    file(APPEND ${CMakeCutomFile} "set(CMAKE_MODULE_PATH\ " ${CMAKE_CURRENT_FUNCTION_LIST_DIR} ")\n" )
     file(APPEND ${CMakeCutomFile} "include(GeneratorResourceCode)\n")
     file(APPEND ${CMakeCutomFile} "GenerateResourceCustomCommand(\"${Target}\" \"${OutDir}\" \"${Additional}\" \"${Language}\" \"${FileToResource}\")\n")
 
